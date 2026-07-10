@@ -73,12 +73,6 @@ You can download a tarball of this dataset [here](https://nlp.stanford.edu/data/
 
 Make sure to move `metadata/wb_metadata.csv`, which contains last layer split, to the directory and rename it to `metadata.csv`.
 
-### Civil Comments and MultiNLI
-
-For the CivilComments dataset, we have altered the split column. The version with the last layer split can be downloaded from [this link](https://mega.nz/file/HexUHASa#ktfZdoi_EG5tjrQ25VJQW56PksE9wVRY29rvL20arM4).
-
-To run experiments on the MultiNLI dataset, please manually download and unzip the dataset from [this link](https://nlp.stanford.edu/data/dro/multinli_bert_features.tar.gz). Further, copy the `utils_glue.py` to the root directory of the dataset, and add the metadata with the last layer split from `metadata/multinli/metadata_random.csv` to the dataset directory.
-
 ### Dominoes-CMF
 
 You can create and access our modified dominoes dataset in `notebooks/dominoes.ipynb`.
