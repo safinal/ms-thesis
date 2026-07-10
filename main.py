@@ -9,7 +9,7 @@ import data
 import utils
 import _test as test
 import run
-import wandb
+import mlflow
 import os
 import models
 import random
@@ -223,11 +223,6 @@ if __name__ == '__main__':
     args_dict = vars(args)
 
     print(json.dumps(args_dict, indent=4))
-
-    os.environ["WANDB_DIR"] = './'
-    os.environ["WANDB_CONFIG_DIR"] = './wandb/config/'
-    os.environ["WANDB_CACHE_DIR"] = './wandb/cache/'
-    os.environ["WANDB_DATA_DIR"] = './wandb/data/'
 
     ############ SEED #################################
     torch.manual_seed(args.seed)

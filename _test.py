@@ -1,6 +1,6 @@
 import torch
 from tqdm import tqdm
-import wandb
+import mlflow
 import data
 
 def test_cnn(dataloader, model, return_samples=False, log=False, args=None, inferred_groups=True):
@@ -73,12 +73,12 @@ def test_cnn(dataloader, model, return_samples=False, log=False, args=None, infe
             worst_acc = min(worst_acc, avg_acc_envs[env_num])
             print(f"env {env_num}, acc: {avg_acc_envs[env_num]}, support: {totals_envs[env_num]}")
         if log:
-            wandb.log({f"Test Accuracy - Env {env_num}": avg_acc_envs[env_num]})
+            mlflow.log_metric(f"Test Accuracy - Env {env_num}", avg_acc_envs[env_num])
     avg_inv_acc = round(all_correct / all_totals, 6)
 
     print(f"all envs mean acc: {avg_inv_acc}")
     if log:
-        wandb.log({"Test Mean Accuracy": avg_inv_acc})
+        mlflow.log_metric("Test Mean Accuracy", avg_inv_acc)
     if return_samples:
         return avg_inv_acc, worst_acc, miscls_envs, corrcls_envs
     return avg_inv_acc, worst_acc

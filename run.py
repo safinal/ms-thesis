@@ -4,7 +4,7 @@ from _test import *
 import torch
 import torch.nn as nn
 import os
-import wandb
+import mlflow
 import numpy as np
 
 
@@ -28,16 +28,14 @@ def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, e
     curr_worst = 0
     curr_avg = 0
     if log:
-        run = wandb.init(project=exp_name,
-                   entity='username',
-                   config={
-                    "learning_rate": optimizer.state_dict()['param_groups'][0]['initial_lr'],
-                    "epochs": epochs,
-                    "step_size": scheduler.step_size,
-                    "gamma": scheduler.gamma
-                },
-                  reinit=True
-                  )
+        mlflow.set_experiment(exp_name)
+        run = mlflow.start_run()
+        mlflow.log_params({
+            "learning_rate": optimizer.state_dict()['param_groups'][0]['initial_lr'],
+            "epochs": epochs,
+            "step_size": scheduler.step_size,
+            "gamma": scheduler.gamma
+        })
         
     cnn_optimizer = optimizer
     lr = cnn_optimizer.state_dict()['param_groups'][0]['initial_lr']
@@ -78,13 +76,15 @@ def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, e
                     saved_model = os.path.join(save_dir,f"best_worst_epoch{epoch}.model")
                     torch.save(model.state_dict(), saved_model)
             if log:
-                wandb.log({"Test Mean Accuracy": inv_acc})
+                mlflow.log_metric("Test Mean Accuracy", inv_acc)
         except KeyboardInterrupt:
             print('Experiment Stopped')
             break
     last_model = os.path.join(save_dir,"last.model")
     torch.save(model.state_dict(), last_model)
     print(f'last model saved at {last_model}')
+    if log:
+        mlflow.end_run()
     return saved_model
 
 def run_loss_inspect_experiment(model, device, spuriousity, balanced_dataloader, testloader, exp_name,
