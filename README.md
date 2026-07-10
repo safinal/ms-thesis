@@ -129,16 +129,6 @@ python main.py [--root_dir ROOT_DIR] [--learning_rate LEARNING_RATE] [--optimize
 - `--validation_path`: Path to validation grouping models- inferred from EIIL (default: `None`).
 - `--saved_val`: Use a saved validation set (default: `False`).
 
-## Contributing
-
-This project welcomes contributions. To contribute, please follow these steps:
-
-1. Fork the repository
-2. Create a new branch
-3. Make your changes and commit them
-4. Push to the branch
-5. Create a new Pull Request
-
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
