@@ -1,1 +1,1 @@
-python main.py --root_dir ./ --experiment ERM --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --optimizer SGD -lr 1e-3 --step_size 100 --weight_decay 1e-4 --gamma 0.5 --epochs 300 --pretrained_path imagenet -b 512 --seed 1 --output_path ./logs
+uv run main.py --root_dir ./ --experiment ERM --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --optimizer SGD -lr 1e-3 --step_size 100 --weight_decay 1e-4 --gamma 0.5 --epochs 300 --pretrained_path imagenet -b 512 --seed 1 --output_path ./logs
