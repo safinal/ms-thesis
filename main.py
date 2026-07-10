@@ -51,10 +51,6 @@ def get_dataset_loaders(args):
         return data.get_waterbirds_loaders(args.dataset_path, batch_size=args.batch_size)
     elif args.dataset == 'celeba':
         return data.get_celeba_loaders(args.dataset_path, batch_size=args.batch_size, num_workers=1)
-    elif args.dataset == 'civilcomments':
-        return data.get_civil_comments_loaders(args.pretrained_path, args.dataset_path, args.batch_size)
-    elif args.dataset == 'multinli':
-        return data.get_multinli_loaders(args.dataset_path, batch_size=16, num_workers=2)
     elif args.dataset == 'urbancars':
         return data.get_urbancars_loaders(args.dataset_path, args.batch_size, "both")
 
@@ -178,7 +174,7 @@ if __name__ == '__main__':
                         choices=['ERM', 'DFR', 'loss', 'cluster', 'entropy', 'gradcam'])
     parser.add_argument('--dataset', type=str, default='waterbirds',
                         help='Name of the dataset',
-                        choices=['waterbirds', 'celeba', 'multinli', 'civilcomments', 'urbancars'],
+                        choices=['waterbirds', 'celeba', 'urbancars'],
                         required=True)
     parser.add_argument('--dataset_path', type=str, default='./waterbird_complete_forest2water2',
                         help='Path of the dataset')
@@ -242,10 +238,6 @@ if __name__ == '__main__':
         n = data.dataset_specs.datasets[args.dataset]['num_classes']
         d = data.dataset_specs.datasets[args.dataset]['hidden_layer_size']
         model = utils.get_fc(device, args.pretrained_path, num_features = d, num_classes=n)
-    elif args.dataset == 'civilcomments':
-        model = utils.get_pretrained_bert(args.pretrained_path, 2, device)
-    elif args.dataset == 'multinli':
-        model = utils.get_pretrained_bert(args.pretrained_path, 3, device)
     else:
         model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
 
@@ -324,9 +316,6 @@ if __name__ == '__main__':
             model.load_state_dict(checkpoint)
             test_model = model.cuda()
             test_model.device = "cuda"
-
-        elif args.dataset=='civilcomments' or args.dataset=='multinli':
-            test_model = utils.get_pretrained_bert(result)
 
         else:
             n_classes = data.dataset_specs.datasets[args.dataset]['num_classes']

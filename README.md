@@ -7,7 +7,7 @@ Please use either `requirements.txt` with `pip` or `env.yml` with `conda` to cre
 
 ## Datasets
 
-The following datasets are supported: Waterbirds, CelebA, MultiNLI, Domino, Colored MNIST (CMNIST), CivilComments, and UrbanCars.
+The following datasets are supported: Waterbirds, CelebA, Domino, Colored MNIST (CMNIST), and UrbanCars.
 
 Please follow the instructions in the [Data Access](#data-access) section to set up the datasets.
 
@@ -18,9 +18,6 @@ Please follow the instructions in the [Data Access](#data-access) section to set
 ```bash
 python main.py --root_dir ./ --experiment ERM --dataset waterbirds --dataset_path /path/to/waterbird_complete95_forest2water2 --optimizer SGD -lr 1e-3 --step_size 100 --weight_decay 1e-4 --gamma 0.5 --epochs 300 --pretrained_path imagenet -b 128
 ```
-
-* CivilComments and MultiNLI
- The ERM models were trained using the code provided by [this repo](https://github.com/izmailovpavel/spurious_feature_learning).
 
 2. **EVaLS-GL**:
 * Celeba example
@@ -40,7 +37,7 @@ This will create the new validation environments in the `validation_path`.
 python3 main.py --dataset urbancars --dataset_path /path/to/data/urbancars/noaug_features_seed0 --experiment loss --sample_size 10 -b 32 -lr 0.0005 --pretrained_path /path/to/ckpts/urbancars/erm_seed0/ckpt.pth --gamma 0.1 --weight_decay 0 --l1 0 --epochs 100 --optimizer adam --step_size 85 --seed 0 --feature_only True --validation_path /path/to/validation_groups/urbancars/seed1 --for_free True
 ```
 
-Note: If the `--feature_only` flag is used, you should provide the pre-computed features of the specified dataset, which can be saved using the `save_features.py` file in the repository. If the flag is not specified, the raw image or text files of the dataset should be provided. Here is an example script:
+Note: If the `--feature_only` flag is used, you should provide the pre-computed features of the specified dataset, which can be saved using the `save_features.py` file in the repository. If the flag is not specified, the raw image of the dataset should be provided. Here is an example script:
 
 ```bash
 python3 save_features.py --dataset civilcomments --dataset_path path/to/data/civilcomments --save_path path/to/save/civilcomments/seed1/ --pretrained_path path/to/civilcomments/erm_seed1 --batch_size 64
@@ -86,7 +83,7 @@ To run an experiment, use the `main.py` script with the appropriate arguments:
 
 ```bash
 python main.py [--root_dir ROOT_DIR] [--learning_rate LEARNING_RATE] [--optimizer {adam,adamW,SGD}]
-               --experiment {ERM,DFR,loss,cluster,entropy,gradcam} --dataset {waterbirds,celeba,multinli,domino,cmnist,civilcomments,metashift,urbancars}
+               --experiment {ERM,DFR,loss,cluster,entropy,gradcam} --dataset {waterbirds,celeba,domino,cmnist,metashift,urbancars}
                --dataset_path DATASET_PATH [--comments COMMENTS] [--output_path OUTPUT_PATH] [--bert_ckpt BERT_CKPT]
                [--sample_size SAMPLE_SIZE] [--weight_decay WEIGHT_DECAY] [--l1 L1] [--step_size STEP_SIZE] [--gamma GAMMA]
                [--epochs EPOCHS] [--model {ResNet,BERT}] [--pretrained_path PRETRAINED_PATH] [--batch_size BATCH_SIZE]
@@ -102,7 +99,7 @@ python main.py [--root_dir ROOT_DIR] [--learning_rate LEARNING_RATE] [--optimize
 - `--learning_rate`, `-lr`: Learning rate for the optimizer (default: `0.001`).
 - `--optimizer`: Type of optimizer (choices: `adam`, `adamW`, `SGD`; default: `adam`).
 - `--experiment`: Type of experiment (choices: `ERM`, `DFR`, `loss`, `cluster`, `entropy`, `gradcam`; required). `loss` is equivalent to EVaLS.
-- `--dataset`: Name of the dataset (choices: `waterbirds`, `celeba`, `multinli`, `domino`, `cmnist`, `civilcomments`, `metashift`, `urbancars`; required).
+- `--dataset`: Name of the dataset (choices: `waterbirds`, `celeba`, `domino`, `cmnist`, `metashift`, `urbancars`; required).
 - `--dataset_path`: Path of the dataset (default: `./waterbird_complete_forest2water2`).
 - `--comments`: Additional comments to be included in the log name (default: `''`).
 - `--output_path`: Path for logs and checkpoints (default: `/home/logs/`).

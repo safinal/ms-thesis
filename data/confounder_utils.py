@@ -8,7 +8,6 @@ from .models import model_attributes
 from torch.utils.data import Dataset, Subset
 from .cub_dataset import CUBDataset
 from .dro_dataset import DRODataset
-from .multinli import MultiNLIDataset
 
 ################
 ### SETTINGS ###
@@ -17,9 +16,6 @@ from .multinli import MultiNLIDataset
 confounder_settings = {
     'CUB':{
         'constructor': CUBDataset
-    },
-    'MultiNLI':{
-        'constructor': MultiNLIDataset
     }
 }
 

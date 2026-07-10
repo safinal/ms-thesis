@@ -22,10 +22,6 @@ def get_dataset_loaders(args):
         return data.get_waterbirds_loaders(args.dataset_path, batch_size=args.batch_size)
     elif args.dataset == 'celeba':
         return data.get_celeba_loaders(args.dataset_path, batch_size=args.batch_size, num_workers=4)
-    elif args.dataset == 'civilcomments':
-        return data.get_civil_comments_loaders(args.pretrained_path, args.dataset_path, args.batch_size)
-    elif args.dataset == 'multinli':
-        return data.get_multinli_loaders(args.dataset_path, batch_size=args.batch_size, num_workers=4)
     elif args.dataset == 'urbancars':
         return  data.get_urbancars_loaders(args.dataset_path, args.batch_size, "both")
 
@@ -50,7 +46,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='feature extraction')
     parser.add_argument('--dataset', type=str, default='waterbirds',
                         help='Name of the dataset',
-                        choices=['waterbirds', 'celeba', 'multinli', 'civilcomments', 'urbancars'],
+                        choices=['waterbirds', 'celeba', 'urbancars'],
                         required=True)
     parser.add_argument('--dataset_path', type=str, default='')
     parser.add_argument('--save_path', type=str, default='')
@@ -64,16 +60,7 @@ if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    if args.dataset in ['civilcomments', 'multinli']:
-        if args.dataset == 'civilcomments':
-            n_class= 2
-        else:
-            n_class = 3
-        model = utils.get_pretrained_bert(args.pretrained_path, n_class, device)
-        model.fc = torch.nn.Identity(model.fc.in_features)
-
-    else:
-        model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
+    model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
 
     trainloader, lastlayerloader, valloader, testloader = get_dataset_loaders(args)
     sets = {
@@ -94,10 +81,7 @@ if __name__ == '__main__':
 
         for batch, (x, y, env) in enumerate(tqdm(loader)):
             with torch.no_grad():
-                if args.dataset in ['civilcomments', 'multinli']:
-                    feature = model(x.to(device))
-                else:
-                    feature = get_resnet50_embed(model, x.to(device))
+                feature = get_resnet50_embed(model, x.to(device))
             all_features.append(feature.detach().cpu())
             all_ys.append(y)
             all_envs.append(env)
