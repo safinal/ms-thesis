@@ -1,0 +1,1 @@
+python3 save_features.py --dataset waterbirds --dataset_path /mnt/old/home/nafisi/feature_masking/EVaLS/datasets/waterbird_complete95_forest2water2 --save_path datasets_features/waterbirds_new2 --pretrained_path /mnt/old/home/nafisi/feature_masking/EVaLS/logs/ERM__waterbirds_LR0.001_step100_gamma0.5_seed1_samples64_l10/best_worst_epoch256.model --batch_size 256
