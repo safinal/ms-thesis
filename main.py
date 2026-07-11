@@ -9,7 +9,6 @@ import data
 import utils
 import _test as test
 import run
-import mlflow
 import os
 import models
 import random
@@ -220,125 +219,129 @@ if __name__ == '__main__':
 
     print(json.dumps(args_dict, indent=4))
 
-    ############ SEED #################################
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic = True
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    os.environ['PYTHONHASHSEED'] = str(args.seed)
-    ###################################################
-    trainloader, lastlayerloader, valloader, testloader = get_dataset_loaders(args)
+    mlflow.set_experiment(f"{args.experiment}_{args.dataset}")
 
-    n_envs = data.dataset_specs.datasets[args.dataset]['num_envs']
+    with mlflow.start_run():
+        mlflow.log_params(args_dict)
+        ############ SEED #################################
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed(args.seed)
+        torch.backends.cudnn.deterministic = True
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        os.environ['PYTHONHASHSEED'] = str(args.seed)
+        ###################################################
+        trainloader, lastlayerloader, valloader, testloader = get_dataset_loaders(args)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        n_envs = data.dataset_specs.datasets[args.dataset]['num_envs']
 
-    if args.feature_only:
-        n = data.dataset_specs.datasets[args.dataset]['num_classes']
-        d = data.dataset_specs.datasets[args.dataset]['hidden_layer_size']
-        model = utils.get_fc(device, args.pretrained_path, num_features = d, num_classes=n)
-    else:
-        model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
-
-    if args.test_only:
-        model.zero_grad()
-        with torch.no_grad():
-            utils.eval_model(trainloader, valloader, testloader, model, lastlayerloader=lastlayerloader, args=args)
-    else:
-        if args.experiment != 'ERM':
-            print ('Accuracy of ERM on the test set')
-            _,_ = test.test_cnn(testloader, model, return_samples=False, args=args, inferred_groups=False)
-
-            # model = freeze_model(model) # Uncomment if you want to infer lastlayer based on random classifier
-            experiment = generate_experiment(args, model)
-            avg_acc, worst_acc, miscls_envs, corrcls_envs = test.test_cnn(lastlayerloader, model, return_samples=True,
-                                                                          args=args)
-            for g in range(4):
-                print(f'for env{g}:\n\tmiscls:', end=' ')
-                print(len(miscls_envs[g]))
-                print('\tcorrcls:', end=' ')
-                print(len(corrcls_envs[g]))
-            balanced_loader = experiment.create_balanced_dataloader_ll(miscls_envs, corrcls_envs,
-                                                                       sample_size=args.sample_size,
-                                                                       model=model, batch_size=args.batch_size,
-                                                                       dataloader=lastlayerloader, dataset=args.dataset)
-            print('lastlayer labels:', balanced_loader.dataset.tensors[1].argmax(1).unique(return_counts=True),
-                  sep='\n')
-            print('lastlayer groups:', balanced_loader.dataset.tensors[2].argmax(1).unique(return_counts=True),
-                  sep='\n')
-
-        if args.for_free:
-            ############ SEED ################################# Uncomment if you want to change seed in this stage
-            # torch.manual_seed(args.seed+40)
-            # torch.cuda.manual_seed(args.seed+40)
-            # torch.backends.cudnn.deterministic = True
-            # random.seed(args.seed+40)
-            # np.random.seed(args.seed+40)
-            # os.environ['PYTHONHASHSEED'] = str(args.seed+40)
-            ###################################################
-
-            print(f'Enjoy for free mode!')
-            experiment = generate_experiment(args, model)
-
-            if args.early_stop_val:
-                valloaders = get_early_stop_valloaders(model, args, lastlayerloader, valloader, args.validation_path)
-
-            else:
-                valloaders = [valloader]
-
-        optimizer, scheduler = generate_optimizer_and_scheduler(model, args.learning_rate, args.step_size,
-                                                                args.gamma, args.optimizer, args.weight_decay)
-        
-        valloaders = [valloader]
-        if args.experiment != 'ERM':
-            if args.fine_tune:
-                model = freeze_model(model, reinit=False)
-            else:
-                model = freeze_model(model, reinit=True)
-
-            result = run.run_last_layer_experiment(model, device, balanced_loader, valloaders,
-                                                   args.experiment,
-                                                   optimizer, args.l1, scheduler, dataset=args.dataset,
-                                                   epochs=args.epochs, seed=args.seed, args=args)
-        else:
-            result = run.run_last_layer_experiment(model, device, trainloader, valloaders,
-                                                       args.experiment,
-                                                       optimizer, args.l1, scheduler, dataset=args.dataset,
-                                                       epochs=args.epochs, seed=args.seed, args=args)
-        print(f'Best model saved at {result}')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if args.feature_only:
             n = data.dataset_specs.datasets[args.dataset]['num_classes']
             d = data.dataset_specs.datasets[args.dataset]['hidden_layer_size']
-            model.fc = torch.nn.Linear(d, n)
-            checkpoint = torch.load(result)
-            model.load_state_dict(checkpoint)
-            test_model = model.cuda()
-            test_model.device = "cuda"
-
+            model = utils.get_fc(device, args.pretrained_path, num_features = d, num_classes=n)
         else:
-            n_classes = data.dataset_specs.datasets[args.dataset]['num_classes']
-            model = torchvision.models.resnet50(weights=None)
-            d = model.fc.in_features
-            model.fc = torch.nn.Linear(d, n_classes)
-            checkpoint = torch.load(result)
-            model.load_state_dict(checkpoint)
-            test_model = model.cuda()
-            test_model.device = "cuda"
+            model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
 
-        if args.for_free:
-            val_avg, val_worst = run.multi_eval(test_model, valloaders, False, args)
+        if args.test_only:
+            model.zero_grad()
+            with torch.no_grad():
+                utils.eval_model(trainloader, valloader, testloader, model, lastlayerloader=lastlayerloader, args=args)
         else:
-            val_avg, val_worst = test.test_cnn(valloader, test_model, return_samples=False, args=args, inferred_groups=True) # TODO
+            if args.experiment != 'ERM':
+                print ('Accuracy of ERM on the test set')
+                _,_ = test.test_cnn(testloader, model, return_samples=False, args=args, inferred_groups=False)
 
-        test_avg, test_worst = test.test_cnn(testloader, test_model, return_samples=False, args=args, inferred_groups=False)
+                # model = freeze_model(model) # Uncomment if you want to infer lastlayer based on random classifier
+                experiment = generate_experiment(args, model)
+                avg_acc, worst_acc, miscls_envs, corrcls_envs = test.test_cnn(lastlayerloader, model, return_samples=True,
+                                                                            args=args)
+                for g in range(4):
+                    print(f'for env{g}:\n\tmiscls:', end=' ')
+                    print(len(miscls_envs[g]))
+                    print('\tcorrcls:', end=' ')
+                    print(len(corrcls_envs[g]))
+                balanced_loader = experiment.create_balanced_dataloader_ll(miscls_envs, corrcls_envs,
+                                                                        sample_size=args.sample_size,
+                                                                        model=model, batch_size=args.batch_size,
+                                                                        dataloader=lastlayerloader, dataset=args.dataset)
+                print('lastlayer labels:', balanced_loader.dataset.tensors[1].argmax(1).unique(return_counts=True),
+                    sep='\n')
+                print('lastlayer groups:', balanced_loader.dataset.tensors[2].argmax(1).unique(return_counts=True),
+                    sep='\n')
 
-        res_dict = {'val':{'avg': val_avg, 'worst':val_worst}, 'test': {'avg': test_avg , 'worst':test_worst}}
-        print (res_dict)
-        print(f'Best model saved at {result}')
-        res_dict['config'] = args_dict
-        json.dump(res_dict, open(os.path.join(save_dir, "results.json"), 'w'))
+            if args.for_free:
+                ############ SEED ################################# Uncomment if you want to change seed in this stage
+                # torch.manual_seed(args.seed+40)
+                # torch.cuda.manual_seed(args.seed+40)
+                # torch.backends.cudnn.deterministic = True
+                # random.seed(args.seed+40)
+                # np.random.seed(args.seed+40)
+                # os.environ['PYTHONHASHSEED'] = str(args.seed+40)
+                ###################################################
 
-        print('Execution Finished')
-        sys.exit(1)
+                print(f'Enjoy for free mode!')
+                experiment = generate_experiment(args, model)
+
+                if args.early_stop_val:
+                    valloaders = get_early_stop_valloaders(model, args, lastlayerloader, valloader, args.validation_path)
+
+                else:
+                    valloaders = [valloader]
+
+            optimizer, scheduler = generate_optimizer_and_scheduler(model, args.learning_rate, args.step_size,
+                                                                    args.gamma, args.optimizer, args.weight_decay)
+            
+            valloaders = [valloader]
+            if args.experiment != 'ERM':
+                if args.fine_tune:
+                    model = freeze_model(model, reinit=False)
+                else:
+                    model = freeze_model(model, reinit=True)
+
+                result = run.run_last_layer_experiment(model, device, balanced_loader, valloaders,
+                                                    args.experiment,
+                                                    optimizer, args.l1, scheduler, dataset=args.dataset,
+                                                    epochs=args.epochs, seed=args.seed, args=args)
+            else:
+                result = run.run_last_layer_experiment(model, device, trainloader, valloaders,
+                                                        args.experiment,
+                                                        optimizer, args.l1, scheduler, dataset=args.dataset,
+                                                        epochs=args.epochs, seed=args.seed, args=args)
+            print(f'Best model saved at {result}')
+
+            if args.feature_only:
+                n = data.dataset_specs.datasets[args.dataset]['num_classes']
+                d = data.dataset_specs.datasets[args.dataset]['hidden_layer_size']
+                model.fc = torch.nn.Linear(d, n)
+                checkpoint = torch.load(result)
+                model.load_state_dict(checkpoint)
+                test_model = model.cuda()
+                test_model.device = "cuda"
+
+            else:
+                n_classes = data.dataset_specs.datasets[args.dataset]['num_classes']
+                model = torchvision.models.resnet50(weights=None)
+                d = model.fc.in_features
+                model.fc = torch.nn.Linear(d, n_classes)
+                checkpoint = torch.load(result)
+                model.load_state_dict(checkpoint)
+                test_model = model.cuda()
+                test_model.device = "cuda"
+
+            if args.for_free:
+                val_avg, val_worst = run.multi_eval(test_model, valloaders, False, args)
+            else:
+                val_avg, val_worst = test.test_cnn(valloader, test_model, return_samples=False, args=args, inferred_groups=True) # TODO
+
+            test_avg, test_worst = test.test_cnn(testloader, test_model, return_samples=False, args=args, inferred_groups=False)
+
+            res_dict = {'val':{'avg': val_avg, 'worst':val_worst}, 'test': {'avg': test_avg , 'worst':test_worst}}
+            print (res_dict)
+            print(f'Best model saved at {result}')
+            res_dict['config'] = args_dict
+            json.dump(res_dict, open(os.path.join(save_dir, "results.json"), 'w'))
+
+            print('Execution Finished')
+            sys.exit(1)
