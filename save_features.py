@@ -13,6 +13,8 @@ import random
 import numpy as np
 from torchvision.models import resnet18
 import torch.nn as nn
+from PIL import Image
+import torchvision.transforms as transforms
 
 def get_dataset_loaders(args):
     '''
@@ -52,6 +54,8 @@ if __name__ == '__main__':
     parser.add_argument('--save_path', type=str, default='')
     parser.add_argument('--pretrained_path', type=str, default=None, help='Path to the trained model')
     parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--counterfactual_dir', type=str, default=None, help='Path to counterfactual images directory')
+    parser.add_argument('--counterfactual_splits', type=str, default='lastlayer', help='Comma-separated list of splits to apply counterfactuals to (e.g. "lastlayer,val")')
 
     args = parser.parse_args()
 
@@ -74,12 +78,45 @@ if __name__ == '__main__':
         os.makedirs(args.save_path)
 
     model.eval()
+    
+    # Get test transform for CF images
+    if args.dataset == 'waterbirds':
+        from data.waterbirds import get_transform_waterbirds
+        transform = get_transform_waterbirds(is_training=False)
+    elif args.dataset == 'celeba':
+        from data.celeba import get_transforms
+        transform = get_transforms(is_training=False)
+    elif args.dataset == 'urbancars':
+        from data.urbancars import get_transforms
+        transform = get_transforms("resnet50", is_training=False)
+    else:
+        transform = None
+
     for n, loader in sets.items():
         all_features = []
         all_ys = []
         all_envs = []
+        global_idx = 0
 
         for batch, (x, y, env) in enumerate(tqdm(loader)):
+            # Replace x with counterfactual images if requested
+            if args.counterfactual_dir and n in args.counterfactual_splits.split(','):
+                cf_x = []
+                for i in range(len(x)):
+                    img_path = os.path.join(args.counterfactual_dir, f"cf_{global_idx:06d}.jpg")
+                    if os.path.exists(img_path):
+                        img = Image.open(img_path).convert("RGB")
+                        if transform:
+                            img = transform(img)
+                        cf_x.append(img)
+                    else:
+                        print(f"Warning: Missing CF image at {img_path}")
+                        cf_x.append(x[i]) # fallback
+                    global_idx += 1
+                x = torch.stack(cf_x)
+            else:
+                global_idx += len(x)
+
             with torch.no_grad():
                 feature = get_resnet50_embed(model, x.to(device))
             all_features.append(feature.detach().cpu())

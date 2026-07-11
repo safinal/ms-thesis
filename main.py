@@ -209,11 +209,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    save_dir = os.path.join(args.output_path,
-                            f"{args.experiment}_{args.comments}_{args.dataset}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}/")
-
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
 
     args_dict = vars(args)
 
@@ -311,24 +306,10 @@ if __name__ == '__main__':
                                                         epochs=args.epochs, seed=args.seed, args=args)
             print(f'Best model saved at {result}')
 
-            if args.feature_only:
-                n = data.dataset_specs.datasets[args.dataset]['num_classes']
-                d = data.dataset_specs.datasets[args.dataset]['hidden_layer_size']
-                model.fc = torch.nn.Linear(d, n)
-                checkpoint = torch.load(result)
-                model.load_state_dict(checkpoint)
-                test_model = model.cuda()
-                test_model.device = "cuda"
-
-            else:
-                n_classes = data.dataset_specs.datasets[args.dataset]['num_classes']
-                model = torchvision.models.resnet50(weights=None)
-                d = model.fc.in_features
-                model.fc = torch.nn.Linear(d, n_classes)
-                checkpoint = torch.load(result)
-                model.load_state_dict(checkpoint)
-                test_model = model.cuda()
-                test_model.device = "cuda"
+            run_id = mlflow.active_run().info.run_id
+            test_model = mlflow.pytorch.load_model(f"runs:/{run_id}/{result}")
+            test_model = test_model.cuda()
+            test_model.device = "cuda"
 
             if args.for_free:
                 val_avg, val_worst = run.multi_eval(test_model, valloaders, False, args)
@@ -341,7 +322,7 @@ if __name__ == '__main__':
             print (res_dict)
             print(f'Best model saved at {result}')
             res_dict['config'] = args_dict
-            json.dump(res_dict, open(os.path.join(save_dir, "results.json"), 'w'))
+            mlflow.log_dict(res_dict, "results.json")
 
             print('Execution Finished')
             sys.exit(1)

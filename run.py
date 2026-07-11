@@ -43,8 +43,9 @@ def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, e
     global_step = 0
     saved_model = None
     best_model = None
-    save_dir = os.path.join(args.output_path,
-                            f"{args.experiment}_{args.comments}_{args.dataset}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}/")
+
+    # Get an input example for mlflow model logging
+    input_example = next(iter(balanced_dataloader))[0][:1].cpu().numpy()
 
     for epoch in range(epochs):
         try:
@@ -57,31 +58,25 @@ def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, e
                 inv_acc, worst_acc = multi_eval(model, testloaders, log, args)
             if inv_acc > curr_avg:
                 curr_avg = inv_acc
-                if best_model:
-                    os.remove(best_model)
                 with torch.no_grad():
-                    best_model = os.path.join(save_dir,f"best_avg_epoch{epoch}.model")
-                    torch.save(model.state_dict(), best_model)
+                    best_model = f"best_avg_epoch{epoch}"
+                    mlflow.pytorch.log_model(model, name=best_model, input_example=input_example)
             if worst_acc == curr_worst and inv_acc > curr_avg:
-                if saved_model:
-                    os.remove(saved_model)
                 with torch.no_grad():
-                    saved_model = os.path.join(save_dir,f"best_worst_epoch{epoch}.model")
-                    torch.save(model.state_dict(), saved_model)
+                    saved_model = f"best_worst_epoch{epoch}"
+                    mlflow.pytorch.log_model(model, name=saved_model, input_example=input_example)
             if worst_acc > curr_worst:
                 curr_worst = worst_acc
-                if saved_model:
-                    os.remove(saved_model)
                 with torch.no_grad():
-                    saved_model = os.path.join(save_dir,f"best_worst_epoch{epoch}.model")
-                    torch.save(model.state_dict(), saved_model)
+                    saved_model = f"best_worst_epoch{epoch}"
+                    mlflow.pytorch.log_model(model, name=saved_model, input_example=input_example)
             if log:
                 mlflow.log_metric("Test Mean Accuracy", inv_acc)
         except KeyboardInterrupt:
             print('Experiment Stopped')
             break
-    last_model = os.path.join(save_dir,"last.model")
-    torch.save(model.state_dict(), last_model)
+    last_model = "last_model"
+    mlflow.pytorch.log_model(model, name=last_model, input_example=input_example)
     print(f'last model saved at {last_model}')
     if log:
         mlflow.end_run()
