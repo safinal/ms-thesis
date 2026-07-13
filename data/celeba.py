@@ -7,7 +7,7 @@ from PIL import Image
 from tqdm import tqdm
 
 
-class celebADataset(Dataset):
+class celebADataset(torch.utils.data.Dataset):
     def __init__(self, phase, dataset_dir, spuriousity, transform = "train"):
         self.split_dict = {
             'train': 0,
@@ -45,7 +45,7 @@ class celebADataset(Dataset):
                                     transforms.Normalize([0.485, 0.456, 0.406],
                                                          [0.229, 0.224, 0.225])] 
                              )
-        else:
+        elif transform:
             transform = transforms.Compose(
                             [transforms.Resize((256, 256)),
                              transforms.CenterCrop((224, 224)),
@@ -66,7 +66,8 @@ class celebADataset(Dataset):
         img_filename = os.path.join(self.dataset_dir,
             self.filename_array[idx])
         img = Image.open(img_filename).convert('RGB')
-        img = self.transform(img)
+        if self.transform:
+            img = self.transform(img)
         label = self.labels[idx]
         env = self.env_dict[(y, gender)]
 
@@ -99,7 +100,6 @@ class celebADataset(Dataset):
             env = self.env_dict[(y, gender)]
             envs.append(torch.unsqueeze(env, 0))
         return torch.cat(envs, dim=0)
-
 
 
 def get_dataset (phase, dataset_dir, spuriousity=95, transform = "train"):

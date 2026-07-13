@@ -1,0 +1,1 @@
+uv run edit_images.py --dataset celeba --dataset_path datasets/celeba-dataset --output_dir datasets/celeba_edited 

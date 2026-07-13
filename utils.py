@@ -41,14 +41,15 @@ def get_pretrained_resnet50(device, pretrained_path='100resnet50_erm_ll.model', 
         d = model.fc.in_features
         model.fc = torch.nn.Linear(d, n_classes).to(device)
         if pretrained_path != 'imagenet':
-            checkpoint = torch.load(pretrained_path)
+            checkpoint = torch.load(pretrained_path) if torch.cuda.is_available() else torch.load(pretrained_path, map_location=torch.device('cpu'))
             try:
                 checkpoint = checkpoint['classifier']
             except:
                 pass
             model.load_state_dict(checkpoint)
-            model = model.cuda()
-            model.device = "cuda"
+            if torch.cuda.is_available():
+                model = model.cuda()
+                model.device = "cuda"
             print(f'loaded {pretrained_path}')
         return model
 

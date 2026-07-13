@@ -57,7 +57,8 @@ class WaterbirdDataset(Dataset):
             self.dataset_dir,
             self.filename_array[idx])
         img = Image.open(img_filename).convert('RGB')
-        img = self.transform(img)
+        if self.transform:
+            img = self.transform(img)
 
         label = self.y_one_hot[idx]
 
