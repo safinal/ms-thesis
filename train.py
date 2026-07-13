@@ -1,7 +1,7 @@
 from torch import nn
 from tqdm import tqdm
 import torch
-import mlflow
+
 
 def train_cnn(dataloader, model, opt, scheduler, step, device, l1_lambda, log=True):
     criterion =  nn.CrossEntropyLoss()
@@ -41,8 +41,8 @@ def train_cnn(dataloader, model, opt, scheduler, step, device, l1_lambda, log=Tr
         "----> [Train] Total iteration #", step, "acc: ",
         avg_acc, "loss: ", avg_loss),
           flush=True)
-    if log:
-        mlflow.log_metrics({"Train Accuracy": avg_acc.item() if torch.is_tensor(avg_acc) else avg_acc, "Train Loss": avg_loss.item() if torch.is_tensor(avg_loss) else avg_loss}, step=step)
+    # if log:
+    #     wandb.log({"Train Accuracy": avg_acc, "Train Loss": avg_loss})
 
     if not scheduler==None:
         scheduler.step()

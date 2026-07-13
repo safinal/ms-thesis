@@ -4,7 +4,6 @@ from _test import *
 import torch
 import torch.nn as nn
 import os
-import mlflow
 import numpy as np
 
 
@@ -25,27 +24,30 @@ def multi_eval(model, testloaders, log, args):
 def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, exp_name,
                               optimizer, l1_lambda, scheduler, dataset='waterbirds',
                               epochs=30, log=False, inspect_loader=None, seed=1, args=None):
-    curr_worst = 0
-    curr_avg = 0
-    if log:
-        mlflow.set_experiment(exp_name)
-        run = mlflow.start_run()
-        mlflow.log_params({
-            "learning_rate": optimizer.state_dict()['param_groups'][0]['initial_lr'],
-            "epochs": epochs,
-            "step_size": scheduler.step_size,
-            "gamma": scheduler.gamma
-        })
+    curr_worst1 = 0
+    curr_avg1 = 0
+    curr_worst2 = 0
+    curr_avg2 = 0
+    # if log:
+    #     run = wandb.init(project=exp_name,
+    #         entity='username',
+    #         config={
+    #             "learning_rate": optimizer.state_dict()['param_groups'][0]['initial_lr'],
+    #             "epochs": epochs,
+    #             "step_size": scheduler.step_size,
+    #             "gamma": scheduler.gamma
+    #         },
+    #         reinit=True
+    #     )
         
     cnn_optimizer = optimizer
     lr = cnn_optimizer.state_dict()['param_groups'][0]['initial_lr']
     cnn_scheduler = scheduler
     global_step = 0
-    saved_model = None
-    best_model = None
-
-    # Get an input example for mlflow model logging
-    input_example = next(iter(balanced_dataloader))[0][:1].cpu().numpy()
+    best_worst_acc_model = None
+    best_avg_acc_model = None
+    save_dir = os.path.join(args.output_path,
+                            f"{args.experiment}_{args.comments}_{args.dataset}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}/")
 
     for epoch in range(epochs):
         try:
@@ -56,31 +58,30 @@ def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, e
             print('----> [Val/Test]')
             with torch.no_grad():
                 inv_acc, worst_acc = multi_eval(model, testloaders, log, args)
-            if inv_acc > curr_avg:
-                curr_avg = inv_acc
+            if inv_acc > curr_avg1 or (inv_acc == curr_avg1 and worst_acc >= curr_worst1):
+                curr_avg1 = inv_acc
+                curr_worst1 = worst_acc
+                if best_avg_acc_model:
+                    os.remove(best_avg_acc_model)
                 with torch.no_grad():
-                    best_model = f"best_avg_epoch{epoch}"
-                    mlflow.pytorch.log_model(model, name=best_model, input_example=input_example)
-            if worst_acc == curr_worst and inv_acc > curr_avg:
+                    best_avg_acc_model = os.path.join(save_dir, f"best_avg_acc_epoch{epoch}_model.pt")
+                    torch.save(model.state_dict(), best_avg_acc_model)
+            if worst_acc > curr_worst2 or (worst_acc == curr_worst2 and inv_acc >= curr_avg2):
+                curr_worst2 = worst_acc
+                curr_avg2 = inv_acc
+                if best_worst_acc_model:
+                    os.remove(best_worst_acc_model)
                 with torch.no_grad():
-                    saved_model = f"best_worst_epoch{epoch}"
-                    mlflow.pytorch.log_model(model, name=saved_model, input_example=input_example)
-            if worst_acc > curr_worst:
-                curr_worst = worst_acc
-                with torch.no_grad():
-                    saved_model = f"best_worst_epoch{epoch}"
-                    mlflow.pytorch.log_model(model, name=saved_model, input_example=input_example)
-            if log:
-                mlflow.log_metric("Test Mean Accuracy", inv_acc)
+                    best_worst_acc_model = os.path.join(save_dir, f"best_worst_acc_epoch{epoch}_model.pt")
+                    torch.save(model.state_dict(), best_worst_acc_model)
+            # if log:
+            #     wandb.log({"Test Mean Accuracy": inv_acc})
         except KeyboardInterrupt:
             print('Experiment Stopped')
             break
-    last_model = "last_model"
-    mlflow.pytorch.log_model(model, name=last_model, input_example=input_example)
-    print(f'last model saved at {last_model}')
-    if log:
-        mlflow.end_run()
-    return saved_model
+    last_model = os.path.join(save_dir, "last_model.pt")
+    torch.save(model.state_dict(), last_model)
+    return best_worst_acc_model
 
 def run_loss_inspect_experiment(model, device, spuriousity, balanced_dataloader, testloader, exp_name,
                               optimizer, l1_lambda, scheduler, dataset='waterbirds',

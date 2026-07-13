@@ -12,7 +12,6 @@ dependencies = [
     "einops>=0.8.0",
     "lpips>=0.1.4",
     "matplotlib>=3.8.4",
-    "mlflow>=3.14.0",
     "numba>=0.66.0",
     "numpy>=2.4.6",
     "ogb>=1.3.6",
