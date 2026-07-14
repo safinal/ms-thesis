@@ -1,7 +1,7 @@
 import os
 import argparse
 import torch
-import torchvision.transforms as transforms
+import torchvision
 from PIL import Image
 from tqdm import tqdm
 from diffusers import AutoPipelineForImage2Image
@@ -10,7 +10,7 @@ import math
 from data import celebADataset, WaterbirdDataset
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class CustomCelebADataset(celebADataset):
@@ -19,7 +19,7 @@ class CustomCelebADataset(celebADataset):
         img = Image.open(img_path).convert('RGB')
         if self.transform:
             img = self.transform(img)
-        label = self.labels[idx]
+        label = self.y_array[idx]
         return img_path, img, label
 
 EDIT_CONFIGS = {
@@ -46,15 +46,13 @@ MODEL_CONFIGS = {
 }
 
 
-def get_dataset(args):
+def get_dataloader(args):
     if args.dataset == 'waterbirds':
         dataset = WaterbirdDataset(split='last_layer', transform=None, dataset_dir=args.dataset_path, num_classes=2, spuriousity=95)
-        return dataset
-        # return torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=8, drop_last=False)
+        return torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=8, drop_last=False)
     elif args.dataset == 'celeba':
-        dataset = CustomCelebADataset(phase='last_layer', dataset_dir=args.dataset_path, spuriousity=95, transform=None)
-        return dataset
-        # return torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=1)
+        dataset = CustomCelebADataset(phase='last_layer', dataset_dir=args.dataset_path, spuriousity=95, transform=torchvision.transforms.ToTensor())
+        return torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=1)
     # elif args.dataset == 'urbancars':
     #     return get_urbancars_loaders(args.dataset_path, args.batch_size, "both")[1]
 
@@ -67,8 +65,8 @@ def load_editing_model(model_name):
     pipeline = AutoPipelineForImage2Image.from_pretrained(
         model_id,
         torch_dtype=torch.bfloat16,
-    ).to(device)
-    # pipeline.enable_model_cpu_offload()
+    )
+    pipeline.enable_model_cpu_offload()
     
     return pipeline, config
 
@@ -85,28 +83,18 @@ def generate_counterfactuals(args):
     
     # Load model and data
     pipeline, config = load_editing_model(args.edit_model)
-    dataset = get_dataset(args)
+    dataloader = get_dataloader(args)
     edit_config = EDIT_CONFIGS[args.dataset]
     
     # Set random generator
     generator = torch.Generator(device=device).manual_seed(args.seed)
-    
+    tensor_to_pil = transforms.ToPILImage()
+
     print(f"Generating counterfactuals for {args.dataset} split...")
     
-    num_iterations = math.ceil(len(dataset) / args.batch_size)
-    for iteration in tqdm(range(num_iterations)):
-        prompts = []
-        targets = []
-        images = []
-        img_paths = []
-        for i in range(iteration*args.batch_size, min(iteration*args.batch_size+args.batch_size, len(dataset))):
-            img_path, image, label = dataset[i]
-            img_paths.append(img_path)
-            images.append(image)
-            target = int(torch.argmax(label).item())
-            targets.append(target)
-            prompts.append(edit_config[target])
-   
+    for img_paths, images, labels,  in tqdm(dataloader):
+        prompts = [edit_config[label] for label in labels]
+        images = [tensor_to_pil(img) for img in images]
         with torch.no_grad():
             outputs = pipeline(
                 prompt=prompts,
@@ -119,9 +107,9 @@ def generate_counterfactuals(args):
         for i, edited_img in enumerate(outputs):
             img_path = img_paths[i]
             img_name = os.path.basename(img_path)
-            shutil.copyfile(img_path, os.path.join(args.output_dir, f"{targets[i]}", img_name))
+            shutil.copyfile(img_path, os.path.join(args.output_dir, f"{labels[i]}", img_name))
             img_name, img_extention = os.path.splitext(img_name)
-            save_path = os.path.join(args.output_dir, f"{targets[i]}", f"{img_name}_aug{img_extention}")
+            save_path = os.path.join(args.output_dir, f"{labels[i]}", f"{img_name}_aug{img_extention}")
             edited_img.save(save_path)
 
 if __name__ == "__main__":

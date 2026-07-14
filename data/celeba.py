@@ -33,26 +33,24 @@ class celebADataset(torch.utils.data.Dataset):
         self.y_array = self.metadata_df['y'].values
         self.gender_array = self.metadata_df['place'].values
         self.filename_array = self.metadata_df['img_filename'].values
-        if transform=='train':
+        if transform == 'train':
             transform = transforms.Compose(
-                                [transforms.ToTensor(), 
-                                 transforms.RandomResizedCrop(
-                                    (224, 224),
-                                    scale=(0.7, 1.0),
-                                    ratio=(0.75, 1.3333333333333333),
-                                    interpolation=2),
-                                    transforms.RandomHorizontalFlip(),
-                                    transforms.Normalize([0.485, 0.456, 0.406],
-                                                         [0.229, 0.224, 0.225])] 
-                             )
-        elif transform:
+                [
+                    transforms.ToTensor(), 
+                    transforms.RandomResizedCrop((224, 224), scale=(0.7, 1.0), ratio=(0.75, 1.3333333333333333), interpolation=2),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                ] 
+            )
+        elif transform == 'test':
             transform = transforms.Compose(
-                            [transforms.Resize((256, 256)),
-                             transforms.CenterCrop((224, 224)),
-                             transforms.ToTensor(), 
-                             transforms.Normalize([0.485, 0.456, 0.406],
-                                                  [0.229, 0.224, 0.225])]
-                        )
+                [
+                    transforms.Resize((256, 256)),
+                    transforms.CenterCrop((224, 224)),
+                    transforms.ToTensor(), 
+                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                ]
+            )
         self.transform = transform
         print(torch.Tensor(self.y_array).type(torch.LongTensor).shape)
         self.labels = torch.nn.functional.one_hot(torch.Tensor(self.y_array).type(torch.LongTensor)).type(torch.FloatTensor)
