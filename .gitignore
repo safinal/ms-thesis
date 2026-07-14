@@ -232,3 +232,6 @@ mlflow.db
 .vscode/
 .windsurf-server
 .triton/
+.kaggle/
+.megaCmd/
+.wget-hsts
