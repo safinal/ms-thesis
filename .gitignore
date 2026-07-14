@@ -231,3 +231,4 @@ mlflow.db
 .vscode-server
 .vscode/
 .windsurf-server
+.triton/
