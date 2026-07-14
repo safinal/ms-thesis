@@ -48,11 +48,11 @@ MODEL_CONFIGS = {
 
 def get_dataloader(args):
     if args.dataset == 'waterbirds':
-        dataset = WaterbirdDataset(split='last_layer', transform=None, dataset_dir=args.dataset_path, num_classes=2, spuriousity=95)
-        return torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=8, drop_last=False)
+        dataset = WaterbirdDataset(split='last_layer', transform=torchvision.transforms.ToTensor(), dataset_dir=args.dataset_path, num_classes=2, spuriousity=95)
+        return torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     elif args.dataset == 'celeba':
         dataset = CustomCelebADataset(phase='last_layer', dataset_dir=args.dataset_path, spuriousity=95, transform=torchvision.transforms.ToTensor())
-        return torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=1)
+        return torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     # elif args.dataset == 'urbancars':
     #     return get_urbancars_loaders(args.dataset_path, args.batch_size, "both")[1]
 
@@ -70,13 +70,6 @@ def load_editing_model(model_name):
     
     return pipeline, config
 
-def tensor_to_pil(tensor):
-    # Convert CHW tensor [0, 1] to PIL Image
-    img = tensor.cpu().clone()
-    img = img.mul(255).byte()
-    img = img.permute(1, 2, 0).numpy()
-    return Image.fromarray(img)
-
 def generate_counterfactuals(args):
     os.makedirs(os.path.join(args.output_dir, "0"), exist_ok=True)
     os.makedirs(os.path.join(args.output_dir, "1"), exist_ok=True)
@@ -88,12 +81,12 @@ def generate_counterfactuals(args):
     
     # Set random generator
     generator = torch.Generator(device=device).manual_seed(args.seed)
-    tensor_to_pil = transforms.ToPILImage()
+    tensor_to_pil = torchvision.transforms.ToPILImage()
 
     print(f"Generating counterfactuals for {args.dataset} split...")
     
-    for img_paths, images, labels,  in tqdm(dataloader):
-        prompts = [edit_config[label] for label in labels]
+    for img_paths, images, labels in tqdm(dataloader):
+        prompts = [edit_config[label.item()] for label in labels]
         images = [tensor_to_pil(img) for img in images]
         with torch.no_grad():
             outputs = pipeline(
@@ -104,12 +97,11 @@ def generate_counterfactuals(args):
                 generator=generator
             ).images
         
-        for i, edited_img in enumerate(outputs):
-            img_path = img_paths[i]
+        for edited_img, img_path, label in zip(outputs, img_paths, labels):
             img_name = os.path.basename(img_path)
-            shutil.copyfile(img_path, os.path.join(args.output_dir, f"{labels[i]}", img_name))
+            shutil.copyfile(img_path, os.path.join(args.output_dir, f"{label.item()}", img_name))
             img_name, img_extention = os.path.splitext(img_name)
-            save_path = os.path.join(args.output_dir, f"{labels[i]}", f"{img_name}_aug{img_extention}")
+            save_path = os.path.join(args.output_dir, f"{label.item()}", f"{img_name}_aug{img_extention}")
             edited_img.save(save_path)
 
 if __name__ == "__main__":
@@ -118,7 +110,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_path", type=str)
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--edit_model", type=str, default="flux2-klein-4b")
-    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     
