@@ -223,4 +223,5 @@ datasets_features/
 logs/
 test.ipynb
 .config/
+.virtual_documents/
 mlflow.db
