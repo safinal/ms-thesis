@@ -4,7 +4,7 @@ import torch
 import torchvision
 from PIL import Image
 from tqdm import tqdm
-from diffusers import AutoPipelineForImage2Image
+from diffusers import AutoPipelineForImage2Image, Flux2KleinPipeline
 import shutil
 import math
 from data import celebADataset, WaterbirdDataset
@@ -46,13 +46,25 @@ MODEL_CONFIGS = {
 }
 
 
+def pil_collate_fn(batch):
+    """
+    Tells the DataLoader how to batch our data without trying to
+    convert PIL images into PyTorch tensors.
+    """
+    img_paths = [item[0] for item in batch]
+    images = [item[1] for item in batch] # List of PIL images
+    labels = torch.tensor([item[2] for item in batch])
+    return img_paths, images, labels
+
 def get_dataloader(args):
-    if args.dataset == 'waterbirds':
-        dataset = WaterbirdDataset(split='last_layer', transform=torchvision.transforms.ToTensor(), dataset_dir=args.dataset_path, num_classes=2, spuriousity=95)
-        return torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    elif args.dataset == 'celeba':
-        dataset = CustomCelebADataset(phase='last_layer', dataset_dir=args.dataset_path, spuriousity=95, transform=torchvision.transforms.ToTensor())
-        return torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    if args.dataset == 'celeba':
+        dataset = CustomCelebADataset(phase='last_layer', dataset_dir=args.dataset_path, spuriousity=95, transform=None)
+        dataloader = torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, collate_fn=pil_collate_fn)
+        return dataloader, dataset
+    # elif args.dataset == 'waterbirds':
+    #     dataset = WaterbirdDataset(split='last_layer', transform=torchvision.transforms.ToTensor(), dataset_dir=args.dataset_path, num_classes=2, spuriousity=95)
+    #     dataloader = torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    #     return dataloader, dataset
     # elif args.dataset == 'urbancars':
     #     return get_urbancars_loaders(args.dataset_path, args.batch_size, "both")[1]
 
@@ -62,7 +74,7 @@ def load_editing_model(model_name):
     
     # Load pipeline
     print(f"Loading {model_id}...")
-    pipeline = AutoPipelineForImage2Image.from_pretrained(
+    pipeline = Flux2KleinPipeline.from_pretrained(
         model_id,
         torch_dtype=torch.bfloat16,
     )
@@ -76,18 +88,16 @@ def generate_counterfactuals(args):
     
     # Load model and data
     pipeline, config = load_editing_model(args.edit_model)
-    dataloader = get_dataloader(args)
+    dataloader, dataset = get_dataloader(args)
     edit_config = EDIT_CONFIGS[args.dataset]
-    
-    # Set random generator
-    generator = torch.Generator(device=device).manual_seed(args.seed)
-    tensor_to_pil = torchvision.transforms.ToPILImage()
 
     print(f"Generating counterfactuals for {args.dataset} split...")
     
+    generator = torch.Generator(device=device).manual_seed(args.seed)
+
     for img_paths, images, labels in tqdm(dataloader):
         prompts = [edit_config[label.item()] for label in labels]
-        images = [tensor_to_pil(img) for img in images]
+        
         with torch.no_grad():
             outputs = pipeline(
                 prompt=prompts,
@@ -96,7 +106,7 @@ def generate_counterfactuals(args):
                 guidance_scale=config["guidance_scale"],
                 generator=generator
             ).images
-        
+
         for edited_img, img_path, label in zip(outputs, img_paths, labels):
             img_name = os.path.basename(img_path)
             shutil.copyfile(img_path, os.path.join(args.output_dir, f"{label.item()}", img_name))
@@ -104,13 +114,14 @@ def generate_counterfactuals(args):
             save_path = os.path.join(args.output_dir, f"{label.item()}", f"{img_name}_aug{img_extention}")
             edited_img.save(save_path)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate counterfactual images")
     parser.add_argument("--dataset", type=str, required=True, choices=["celeba", "waterbirds", "urbancars"])
     parser.add_argument("--dataset_path", type=str)
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--edit_model", type=str, default="flux2-klein-4b")
-    parser.add_argument("--batch_size", type=int, default=4)
+    parser.add_argument("--batch_size", type=int, default=6)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     
