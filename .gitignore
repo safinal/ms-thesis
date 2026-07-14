@@ -225,3 +225,9 @@ test.ipynb
 .config/
 .virtual_documents/
 mlflow.db
+.cursor-server
+.idea/
+.lightning_studio/
+.vscode-server
+.vscode/
+.windsurf-server
