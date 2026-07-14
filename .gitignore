@@ -222,4 +222,5 @@ datasets/
 datasets_features/
 logs/
 test.ipynb
+.config/
 mlflow.db
