@@ -53,12 +53,9 @@ Follow the instructions in the [DFR repo](https://github.com/PolinaKirichenko/de
 
 Our code expects the following files/folders in the `[root_dir]/celebA` directory:
 
-- `data/celeba_metadata.csv`
-- `data/img_align_celeba/`
+- `data/metadata.csv`
 
 You can download these dataset files from [this Kaggle link](https://www.kaggle.com/jessicali9530/celeba-dataset).
-
-Make sure to move `metadata/celeba_metadata.csv`, which contains last layer split, to the data directory.
 
 ### Waterbirds
 
@@ -82,11 +79,11 @@ For the Urbancars dataset, please refer to [Whac-A-Mole](https://github.com/face
 To run an experiment, use the `main.py` script with the appropriate arguments:
 
 ```bash
-python main.py [--root_dir ROOT_DIR] [--learning_rate LEARNING_RATE] [--optimizer {adam,adamW,SGD}]
+uv run main.py [--root_dir ROOT_DIR] [--learning_rate LEARNING_RATE] [--optimizer {adam,adamW,SGD}]
                --experiment {ERM,DFR,loss,cluster,entropy,gradcam} --dataset {waterbirds,celeba,domino,cmnist,metashift,urbancars}
-               --dataset_path DATASET_PATH [--comments COMMENTS] [--output_path OUTPUT_PATH] [--bert_ckpt BERT_CKPT]
+               --dataset_path DATASET_PATH [--comments COMMENTS] [--output_path OUTPUT_PATH]
                [--sample_size SAMPLE_SIZE] [--weight_decay WEIGHT_DECAY] [--l1 L1] [--step_size STEP_SIZE] [--gamma GAMMA]
-               [--epochs EPOCHS] [--model {ResNet,BERT}] [--pretrained_path PRETRAINED_PATH] [--batch_size BATCH_SIZE]
+               [--epochs EPOCHS] [--pretrained_path PRETRAINED_PATH] [--batch_size BATCH_SIZE]
                [--num_workers NUM_WORKERS] [--test_only TEST_ONLY] [--log LOG] [--for_free FOR_FREE] [--seed SEED]
                [--random_grouping RANDOM_GROUPING] [--feature_only FEATURE_ONLY] [--num_val NUM_VAL]
                [--fine_tune FINE_TUNE] [--early_stop_val EARLY_STOP_VAL] [--validation_path VALIDATION_PATH]
@@ -103,14 +100,12 @@ python main.py [--root_dir ROOT_DIR] [--learning_rate LEARNING_RATE] [--optimize
 - `--dataset_path`: Path of the dataset (default: `./waterbird_complete_forest2water2`).
 - `--comments`: Additional comments to be included in the log name (default: `''`).
 - `--output_path`: Path for logs and checkpoints (default: `/home/logs/`).
-- `--bert_ckpt`: Weights of pre-trained BERT for tokenization (default: `bert-base-uncased`).
 - `--sample_size`: **Sample size** of each group in the experiment (default: `64`).
 - `--weight_decay`: Weight decay coefficient for L2 regularization (default: `0`).
 - `--l1`: Coefficient for L1 regularization (default: `0`).
 - `--step_size`: Step size for the LR scheduler (default: `10`).
 - `--gamma`: Gamma for the LR scheduler (default: `0.1`).
 - `--epochs`: Number of epochs (default: `30`).
-- `--model`: Name of the model to use (choices: `ResNet`, `BERT`; default: `resnet`).
 - `--pretrained_path`: Path of the pre-trained model file (required for some experiments).
 - `--batch_size`, `-b`: Batch size for the last layer re-training (default: `128`).
 - `--num_workers`: Number of CPU cores to use (default: `8`).

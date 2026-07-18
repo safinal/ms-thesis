@@ -1,5 +1,5 @@
 from torch import nn
-from models import ResNet50, StdResNet50, ResNet18, LeNet5, bert_pretrained, get_fc
+from models import ResNet50, StdResNet50, ResNet18, LeNet5, get_fc
 from _test import test_cnn 
 import torch 
 import torchvision
@@ -74,11 +74,6 @@ def get_pretrained_resnet18(device, pretrained_path='100resnet50_erm_ll.model', 
 def get_pretrained_stdresnet(pretrained_path='100resnet50_erm_ll.model'):
     return StdResNet50(2, pretrained_path)
 
-def get_pretrained_bert(pretrained_path, num_classes=2, device=torch.device('cuda')):
-    model = bert_pretrained(num_classes).to(device)
-
-    model.load_state_dict(torch.load(pretrained_path))
-    return model
 
 def eval_model(trainloader, valloader, testloader, model, lastlayerloader=None, args=None):
     print('Train:', '-'*50, sep='\n')

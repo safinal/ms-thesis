@@ -1,6 +1,6 @@
 import random
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+
 from .experiment import Experiment
 
 class DFR(Experiment):
@@ -23,6 +23,6 @@ class DFR(Experiment):
         labels = torch.stack([tensor[1] for tensor in balanced_data])
         envs = torch.Tensor(envs).to(torch.int64)
         envs = torch.nn.functional.one_hot(envs, num_classes=8)
-        balanced_dataset = TensorDataset(features, labels, envs)
-        balanced_dataloader = DataLoader(balanced_dataset, batch_size=kwargs['batch_size'], shuffle=True)
+        balanced_dataset = torch.utils.data.TensorDataset(features, labels, envs)
+        balanced_dataloader = torch.utils.data.DataLoader(balanced_dataset, batch_size=kwargs['batch_size'], shuffle=True, num_workers=4)
         return balanced_dataloader

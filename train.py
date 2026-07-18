@@ -12,7 +12,8 @@ def train_cnn(dataloader, model, opt, scheduler, step, device, l1_lambda, log=Tr
     count = 0
 
     model.train()
-    for (batch, (inputs, labels, envs)) in enumerate(tqdm(dataloader)):
+    for batch, data in enumerate(tqdm(dataloader)):
+        inputs, labels = data[:2]
         count += inputs.shape[0]
 
         inputs = inputs.to(device)

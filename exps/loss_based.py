@@ -79,18 +79,18 @@ class LossBasedExp(Experiment):
 
         return ret
 
-    def create_balanced_dataloader_ll(self, miscls_data_dict, corrcls_data_dict, sample_size, model, **kwargs):
+    def create_balanced_dataloader_ll(self, miscls_envs, corrcls_envs, sample_size, model, **kwargs):
         assert 'batch_size' in kwargs.keys(), 'Missing batch_size in arguments'
-        miscls_loss_dict = self.calculate_cross_entropy(miscls_data_dict, model)
-        corrcls_loss_dict = self.calculate_cross_entropy(corrcls_data_dict, model)
+        miscls_loss_dict = self.calculate_cross_entropy(miscls_envs, model)
+        corrcls_loss_dict = self.calculate_cross_entropy(corrcls_envs, model)
 
-        miscls_data_dict = self.get_classwise_dict(miscls_data_dict)
-        corrcls_data_dict = self.get_classwise_dict(corrcls_data_dict)
+        miscls_envs = self.get_classwise_dict(miscls_envs)
+        corrcls_envs = self.get_classwise_dict(corrcls_envs)
 
         miscls_loss_dict = self.get_classwise_dict(miscls_loss_dict)
         corrcls_loss_dict = self.get_classwise_dict(corrcls_loss_dict)
 
-        data_dict = {c: miscls_data_dict[c]+corrcls_data_dict[c] for c in miscls_data_dict.keys()}
+        data_dict = {c: miscls_envs[c]+corrcls_envs[c] for c in miscls_envs.keys()}
         loss_dict = {c: miscls_loss_dict[c]+corrcls_loss_dict[c] for c in miscls_loss_dict.keys()}
 
         high_loss_selected_samples = self.select_samples(data_dict, loss_dict, sample_size, top=True)

@@ -42,13 +42,8 @@ class SpuriousCorrelationDataset(Dataset):
         else:
             self._get_class_spurious_groups()
         self._count_groups()
-        self.text = not "img_filename" in self.metadata_df
-        if self.text:
-            print("NLP dataset")
-            self.text_array = list(pd.read_csv(os.path.join(
-                basedir, "text.csv"))["text"])
-        else:
-            self.filename_array = self.metadata_df["img_filename"].values
+
+        self.filename_array = self.metadata_df["img_filename"].values
 
     def _get_metadata(self, split):
         split_i = _get_split(split)
@@ -83,10 +78,7 @@ class SpuriousCorrelationDataset(Dataset):
         y = self.y_array[idx]
         g = self.group_array[idx]
         s = self.spurious_array[idx]
-        if self.text:
-            x = self._text_getitem(idx)
-        else:
-            x = self._image_getitem(idx)
+        x = self._image_getitem(idx)
         return x, y, g, s
 
     def _image_getitem(self, idx):
@@ -95,10 +87,3 @@ class SpuriousCorrelationDataset(Dataset):
         if self.transform:
             img = self.transform(img)
         return img
-
-    def _text_getitem(self, idx):
-        text = self.text_array[idx]
-        if self.transform:
-            text = self.transform(text)
-        return text
-

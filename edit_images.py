@@ -5,14 +5,15 @@ from PIL import Image
 from tqdm import tqdm
 from diffusers import AutoPipelineForImage2Image, Flux2KleinPipeline
 import shutil
-from data import celebADataset, WaterbirdDataset
+from data import CelebADataset, WaterbirdDataset
 import types
+import pandas as pd
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-class CustomCelebADataset(celebADataset):
+class CustomCelebADataset(CelebADataset):
     def __getitem__(self, idx):
         img_path = os.path.join(self.dataset_dir, self.filename_array[idx])
         img = Image.open(img_path).convert('RGB')
@@ -59,7 +60,7 @@ def get_dataloader(args):
     if args.dataset == 'celeba':
         dataset = CustomCelebADataset(phase='last_layer', dataset_dir=args.dataset_path, spuriousity=95, transform=None)
         dataloader = torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, collate_fn=pil_collate_fn)
-        return dataloader, dataset
+        return dataloader
     # elif args.dataset == 'waterbirds':
     #     dataset = WaterbirdDataset(split='last_layer', transform=torchvision.transforms.ToTensor(), dataset_dir=args.dataset_path, num_classes=2, spuriousity=95)
     #     dataloader = torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
@@ -112,17 +113,13 @@ def load_editing_model(model_name):
     
     # Load pipeline
     print(f"Loading {model_id}...")
+    pipeline = Flux2KleinPipeline.from_pretrained(
+        model_id,
+        torch_dtype=torch.bfloat16,
+    )
     try:
-        pipeline = Flux2KleinPipeline.from_pretrained(
-            model_id,
-            torch_dtype=torch.bfloat16,
-        ).to(device)
-        pipeline.enable_model_cpu_offload()
+        pipeline.to(device)
     except:
-        pipeline = Flux2KleinPipeline.from_pretrained(
-            model_id,
-            torch_dtype=torch.bfloat16,
-        )
         pipeline.enable_model_cpu_offload()
 
     # Monkey-patch to enable batched independent image editing
@@ -133,17 +130,17 @@ def load_editing_model(model_name):
     return pipeline, config
 
 def generate_counterfactuals(args):
-    os.makedirs(os.path.join(args.output_dir, "0"), exist_ok=True)
-    os.makedirs(os.path.join(args.output_dir, "1"), exist_ok=True)
+    os.makedirs(args.output_dir, exist_ok=True)
     
-    # Load model and data
     pipeline, config = load_editing_model(args.edit_model)
-    dataloader, dataset = get_dataloader(args)
+    dataloader = get_dataloader(args)
     edit_config = EDIT_CONFIGS[args.dataset]
 
     print(f"Generating counterfactuals for {args.dataset} split...")
     
     generator = torch.Generator(device=device).manual_seed(args.seed)
+
+    metadata_df = pd.DataFrame(columns=['img_filename', 'y'])
 
     for img_paths, images, labels in tqdm(dataloader):
         prompts = [edit_config[label.item()] for label in labels]
@@ -156,12 +153,21 @@ def generate_counterfactuals(args):
             generator=generator,
         ).images
 
+        img_name_lst = []
+        labels_lst = []
         for edited_img, img_path, label in zip(outputs, img_paths, labels):
             img_name = os.path.basename(img_path)
-            shutil.copyfile(img_path, os.path.join(args.output_dir, f"{label.item()}", img_name))
+            shutil.copyfile(img_path, os.path.join(args.output_dir, img_name))
+            img_name_lst.append(img_name)
+            labels_lst.append(label.item())
             img_name, img_extention = os.path.splitext(img_name)
-            save_path = os.path.join(args.output_dir, f"{label.item()}", f"{img_name}_aug{img_extention}")
-            edited_img.save(save_path)
+            img_name = f"{img_name}_aug{img_extention}"
+            edited_img.save(os.path.join(args.output_dir, img_name))
+            img_name_lst.append(img_name)
+            labels_lst.append(int(not label.item()))
+        metadata_df = pd.concat((metadata_df, pd.DataFrame({'img_filename': img_name_lst, 'y': labels_lst}))).sample(frac=1)
+        metadata_df.to_csv(os.path.join(args.output_dir, "metadata.csv"), index=False)
+            
 
 
 if __name__ == "__main__":

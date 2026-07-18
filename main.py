@@ -167,38 +167,26 @@ def get_cls_valloaders (model, args, valloader):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Spurious Correlation Experiment')
     parser.add_argument('--root_dir', default=None)
-    parser.add_argument('--learning_rate', '-lr', type=float, default=0.001, help='Learning rate for optimizer')
-    parser.add_argument('--optimizer', type=str, default='adam', help='Type of optimizer',
-                        choices=['adam', 'adamW', 'SGD'])
-    parser.add_argument('--experiment', type=str, help='Type of experiment',
-                        choices=['ERM', 'DFR', 'loss', 'cluster', 'entropy', 'gradcam'])
-    parser.add_argument('--dataset', type=str, default='waterbirds',
-                        help='Name of the dataset',
-                        choices=['waterbirds', 'celeba', 'urbancars'],
-                        required=True)
-    parser.add_argument('--dataset_path', type=str, default='./waterbird_complete_forest2water2',
-                        help='Path of the dataset')
-    parser.add_argument('--comments', type=str, default='',
-                        help='comments to be included in the name of logs')
-    parser.add_argument('--output_path', type=str, default='./', help='Path of the logs and checkpoints')
-    parser.add_argument('--bert_ckpt', type=str, default='bert-base-uncased',
-                        help='weights of pretrained bert for tokenization')
+    parser.add_argument('--learning_rate', '-lr', type=float, default=0.001)
+    parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'adamW', 'SGD'])
+    parser.add_argument('--experiment', type=str, required=True, choices=['ERM', 'DFR', 'loss', 'cluster', 'entropy', 'gradcam', 'CVA'])
+    parser.add_argument('--dataset', type=str, required=True, choices=['waterbirds', 'celeba', 'urbancars'])
+    parser.add_argument('--dataset_path', type=str, required=True)
+    parser.add_argument('--comments', type=str, default='', help='comments to be included in the name of logs')
+    parser.add_argument('--output_path', type=str, required=True, help='Path of the logs and checkpoints')
     parser.add_argument('--sample_size', type=int, default=64, help='Sample size of each group in the experiment')
     parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay coefficient for L2 regularization')
     parser.add_argument('--l1', type=float, default=0, help='Weight decay coefficient for L1 regularization')
     parser.add_argument('--step_size', type=int, default=10, help='Step size for LR scheduler')
     parser.add_argument('--gamma', type=float, default=0.1, help='Gamma for LR scheduler')
     parser.add_argument('--epochs', type=int, default=30, help='Number of epochs')
-    parser.add_argument('--model', type=str, default='resnet', help='Name of the model to use',
-                        choices=['ResNet', 'BERT'])
-    parser.add_argument('--pretrained_path', type=str, default=None, help='Path of the .model file')
-    parser.add_argument('--batch_size', '-b', type=int, default=128, help='Batch size for last layer re-training')
+    parser.add_argument('--pretrained_path', type=str, default=None, help='Path of the pretrained model file')
+    parser.add_argument('--batch_size', '-b', type=int, default=128)
     parser.add_argument('--num_workers', type=int, default=8, help='Number of CPU cores to use')
     parser.add_argument('--test_only', type=bool, default=False, help='Just test the specified model on the dataset')
     parser.add_argument('--log', type=bool, default=True, help='Whether log the experiment on wandb or not')
-    parser.add_argument('--for_free', type=bool, default=False,
-                        help='choose the best model based on group-inferred validation data')
-    parser.add_argument('--seed', type=int, default=1, help='random seed')
+    parser.add_argument('--for_free', type=bool, default=False, help='choose the best model based on group-inferred validation data')
+    parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--random_grouping', type=bool, default=False, help='randomly group validation data')
     parser.add_argument('--feature_only', type=bool, default=False, help='load features instead of the raw data')
     parser.add_argument('--num_val', type=int, default=1, help='number of validation sets')
@@ -207,6 +195,8 @@ if __name__ == '__main__':
     parser.add_argument('--validation_path', type=str, default=None, help='Path to validation grouping models')
     parser.add_argument('--saved_val', type=bool, default=False, help='use saved validation set.')
     parser.add_argument('--error_splitting', type=bool, default=False, help='use error splitting for environment inference.')
+    parser.add_argument('--balanced_dataset_path', type=str, default=None)
+
 
     args = parser.parse_args()
 
@@ -257,21 +247,24 @@ if __name__ == '__main__':
 
             # model = freeze_model(model) # Uncomment if you want to infer lastlayer based on random classifier
             experiment = generate_experiment(args, model)
-            avg_acc, worst_acc, miscls_envs, corrcls_envs = test.test_cnn(lastlayerloader, model, return_samples=True,
-                                                                          args=args)
+            avg_acc, worst_acc, miscls_envs, corrcls_envs = test.test_cnn(lastlayerloader, model, return_samples=True, args=args)
             for g in range(4):
                 print(f'for env{g}:\n\tmiscls:', end=' ')
                 print(len(miscls_envs[g]))
                 print('\tcorrcls:', end=' ')
                 print(len(corrcls_envs[g]))
-            balanced_loader = experiment.create_balanced_dataloader_ll(miscls_envs, corrcls_envs,
-                                                                       sample_size=args.sample_size,
-                                                                       model=model, batch_size=args.batch_size,
-                                                                       dataloader=lastlayerloader, dataset=args.dataset)
-            print('lastlayer labels:', balanced_loader.dataset.tensors[1].argmax(1).unique(return_counts=True),
-                  sep='\n')
-            print('lastlayer groups:', balanced_loader.dataset.tensors[2].argmax(1).unique(return_counts=True),
-                  sep='\n')
+            balanced_loader = experiment.create_balanced_dataloader_ll(
+                miscls_envs=miscls_envs, 
+                corrcls_envs=corrcls_envs,
+                sample_size=args.sample_size,
+                model=model, 
+                batch_size=args.batch_size,
+                dataloader=lastlayerloader, 
+                dataset=args.dataset, 
+                balanced_dataset_path=args.balanced_dataset_path
+            )
+            print('lastlayer labels:', balanced_loader.dataset.tensors[1].argmax(1).unique(return_counts=True), sep='\n')
+            # print('lastlayer groups:', balanced_loader.dataset.tensors[2].argmax(1).unique(return_counts=True), sep='\n')
 
         if args.for_free:
             ############ SEED ################################# Uncomment if you want to change seed in this stage
