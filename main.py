@@ -88,6 +88,9 @@ def generate_experiment(args, model=None):
         return exps.EntropyBasedExp()
     elif args.experiment == 'gradcam':
         return exps.GradCAMExp(model)
+    elif args.experiment == 'CVA':
+        return exps.CVA()
+
 
 
 def train_early_stop(model, trainloader, valloader):
@@ -263,7 +266,7 @@ if __name__ == '__main__':
                 dataset=args.dataset, 
                 balanced_dataset_path=args.balanced_dataset_path
             )
-            print('lastlayer labels:', balanced_loader.dataset.tensors[1].argmax(1).unique(return_counts=True), sep='\n')
+            # print('lastlayer labels:', balanced_loader.dataset.tensors[1].argmax(1).unique(return_counts=True), sep='\n')
             # print('lastlayer groups:', balanced_loader.dataset.tensors[2].argmax(1).unique(return_counts=True), sep='\n')
 
         if args.for_free:

@@ -22,7 +22,7 @@ class CelebADataset(torch.utils.data.Dataset):
         }
         self.dataset_dir = dataset_dir
         self.metadata_df = pd.read_csv(os.path.join(self.dataset_dir, 'metadata.csv')) # f'balanced_celeba_split{spuriousity}_with_additional_last_layer.csv'))
-        if 'split' in self.metadata_df.columns or phase is None:
+        if 'split' in self.metadata_df.columns:
             self.metadata_df = self.metadata_df[self.metadata_df['split']==self.split_dict[phase]]
         if sample_size is not None:
             metadata_df = pd.DataFrame(columns=[self.metadata_df.columns])

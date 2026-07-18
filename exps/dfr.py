@@ -24,5 +24,5 @@ class DFR(Experiment):
         envs = torch.Tensor(envs).to(torch.int64)
         envs = torch.nn.functional.one_hot(envs, num_classes=8)
         balanced_dataset = torch.utils.data.TensorDataset(features, labels, envs)
-        balanced_dataloader = torch.utils.data.DataLoader(balanced_dataset, batch_size=kwargs['batch_size'], shuffle=True, num_workers=4)
+        balanced_dataloader = torch.utils.data.DataLoader(balanced_dataset, batch_size=kwargs['batch_size'], shuffle=True)
         return balanced_dataloader

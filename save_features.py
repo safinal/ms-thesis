@@ -14,6 +14,7 @@ import numpy as np
 from torchvision.models import resnet18
 import torch.nn as nn
 
+
 def get_dataset_loaders(args):
     '''
         returns trainloader, lastlayer_loader, valloader, testloader with args.batch_size
@@ -25,6 +26,16 @@ def get_dataset_loaders(args):
     elif args.dataset == 'urbancars':
         return  data.get_urbancars_loaders(args.dataset_path, args.batch_size, "both")
 
+
+def get_dataset_loader(args):
+    if args.dataset == 'celeba':
+        dataset = data.CelebADataset(phase=None, dataset_dir=args.dataset_path, spuriousity=95, transform='test')
+        return torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    # elif args.dataset == 'waterbirds':
+    #     pass
+    # elif args.dataset == 'urbancars':
+    #     pass
+    
 
 #source: https://github.com/PolinaKirichenko/deep_feature_reweighting/blob/main/dfr_evaluate_spurious.py
 def get_resnet50_embed(m, x):
@@ -44,14 +55,12 @@ def get_resnet50_embed(m, x):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='feature extraction')
-    parser.add_argument('--dataset', type=str, default='waterbirds',
-                        help='Name of the dataset',
-                        choices=['waterbirds', 'celeba', 'urbancars'],
-                        required=True)
-    parser.add_argument('--dataset_path', type=str, default='')
-    parser.add_argument('--save_path', type=str, default='')
-    parser.add_argument('--pretrained_path', type=str, default=None, help='Path to the trained model')
+    parser.add_argument('--dataset', type=str, help='Name of the dataset', required=True, choices=['waterbirds', 'celeba', 'urbancars'])
+    parser.add_argument('--dataset_path', type=str, required=True)
+    parser.add_argument('--save_path', type=str, required=True)
+    parser.add_argument('--pretrained_path', type=str, required=True, help='Path to the trained model')
     parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--cva', type=bool, default=False)
 
     args = parser.parse_args()
 
@@ -62,13 +71,16 @@ if __name__ == '__main__':
 
     model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
 
-    trainloader, lastlayerloader, valloader, testloader = get_dataset_loaders(args)
-    sets = {
+    if args.cva:
+        sets = {'cva': get_dataset_loader(args)}
+    else:
+        trainloader, lastlayerloader, valloader, testloader = get_dataset_loaders(args)
+        sets = {
             'val': valloader,
             'lastlayer': lastlayerloader,
-            'test':testloader,
-            'train':trainloader
-            }
+            'test': testloader,
+            'train': trainloader
+        }
 
     if not os.path.exists(os.path.join(args.save_path)):
         os.makedirs(args.save_path)
@@ -92,6 +104,6 @@ if __name__ == '__main__':
 
         print (all_features.shape, all_ys.shape, all_envs.shape)
 
-        torch.save (all_features,os.path.join(args.save_path, f'{n}_features.pt'))
+        torch.save(all_features,os.path.join(args.save_path, f'{n}_features.pt'))
         torch.save(all_ys,  os.path.join(args.save_path,f'{n}_labels.pt'))
         torch.save(all_envs, os.path.join(args.save_path,f'{n}_envs.pt'))
