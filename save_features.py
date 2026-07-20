@@ -1,18 +1,10 @@
-import utils
-import data
 import torch
-from spuco.group_inference import EIIL
-import torch
-import models
-import data
-import utils
 import argparse
-from tqdm import tqdm
 import os
-import random
-import numpy as np
-from torchvision.models import resnet18
-import torch.nn as nn
+from tqdm import tqdm
+
+from data import get_waterbirds_loaders, get_celeba_loaders, get_urbancars_loaders, CelebADataset
+from utils import get_pretrained_resnet50
 
 
 def get_dataset_loaders(args):
@@ -20,16 +12,16 @@ def get_dataset_loaders(args):
         returns trainloader, lastlayer_loader, valloader, testloader with args.batch_size
     '''
     if args.dataset == 'waterbirds':
-        return data.get_waterbirds_loaders(args.dataset_path, batch_size=args.batch_size)
+        return get_waterbirds_loaders(args.dataset_path, batch_size=args.batch_size)
     elif args.dataset == 'celeba':
-        return data.get_celeba_loaders(args.dataset_path, batch_size=args.batch_size, num_workers=4)
+        return get_celeba_loaders(args.dataset_path, batch_size=args.batch_size, num_workers=4)
     elif args.dataset == 'urbancars':
-        return  data.get_urbancars_loaders(args.dataset_path, args.batch_size, "both")
+        return  get_urbancars_loaders(args.dataset_path, args.batch_size, "both")
 
 
 def get_dataset_loader(args):
     if args.dataset == 'celeba':
-        dataset = data.CelebADataset(phase=None, dataset_dir=args.dataset_path, spuriousity=95, transform='test')
+        dataset = CelebADataset(phase=None, dataset_dir=args.dataset_path, spuriousity=95, transform='test', sample_size=args.sample_size)
         return torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     # elif args.dataset == 'waterbirds':
     #     pass
@@ -61,15 +53,14 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_path', type=str, required=True, help='Path to the trained model')
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--cva', type=bool, default=False)
+    parser.add_argument('--sample_size', type=int, default=64)
 
     args = parser.parse_args()
-
-
 
     torch.multiprocessing.set_sharing_strategy('file_system')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
+    model = get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
 
     if args.cva:
         sets = {'cva': get_dataset_loader(args)}
@@ -91,19 +82,24 @@ if __name__ == '__main__':
         all_ys = []
         all_envs = []
 
-        for batch, (x, y, env) in enumerate(tqdm(loader)):
+        for data in tqdm(loader):
+            if len(data) == 3:
+                x, y, env = data
+            else:
+                x, y = data
             with torch.no_grad():
                 feature = get_resnet50_embed(model, x.to(device))
             all_features.append(feature.detach().cpu())
             all_ys.append(y)
-            all_envs.append(env)
+            if len(data) == 3:
+                all_envs.append(env)
 
         all_features = torch.concat(all_features, 0)
         all_ys = torch.concat(all_ys, 0)
-        all_envs = torch.concat(all_envs, 0)
-
-        print (all_features.shape, all_ys.shape, all_envs.shape)
+        if all_envs:
+            all_envs = torch.concat(all_envs, 0)
 
         torch.save(all_features,os.path.join(args.save_path, f'{n}_features.pt'))
         torch.save(all_ys,  os.path.join(args.save_path,f'{n}_labels.pt'))
-        torch.save(all_envs, os.path.join(args.save_path,f'{n}_envs.pt'))
+        if not isinstance(all_envs, list):
+            torch.save(all_envs, os.path.join(args.save_path,f'{n}_envs.pt'))

@@ -21,9 +21,19 @@ def multi_eval(model, testloaders, log, args):
 
 
 
-def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, exp_name,
-                              optimizer, l1_lambda, scheduler, dataset='waterbirds',
-                              epochs=30, log=False, inspect_loader=None, seed=1, args=None):
+def run_last_layer_experiment(
+        model, 
+        device, 
+        balanced_dataloader, 
+        testloaders, 
+        optimizer, 
+        l1_lambda, 
+        scheduler, 
+        save_dir,
+        epochs=30, 
+        log=False, 
+        args=None
+    ):
     curr_worst1 = 0
     curr_avg1 = 0
     curr_worst2 = 0
@@ -46,8 +56,6 @@ def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, e
     global_step = 0
     best_worst_acc_model = None
     best_avg_acc_model = None
-    save_dir = os.path.join(args.output_path,
-                            f"{args.experiment}_{args.comments}_{args.dataset}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}/")
 
     for epoch in range(epochs):
         try:
@@ -55,9 +63,10 @@ def run_last_layer_experiment(model, device, balanced_dataloader, testloaders, e
             print("epoch:", epoch)
             print("=========================")
             global_step = train_cnn(balanced_dataloader, model, cnn_optimizer, cnn_scheduler, global_step, device, l1_lambda, log)
-            print('----> [Val/Test]')
             with torch.no_grad():
                 inv_acc, worst_acc = multi_eval(model, testloaders, log, args)
+            print(f"----> [Val] Worst Group Accuracy: {worst_acc}, Average Accuracy: {inv_acc}")
+            print(f"----> [Val] Best Worst Group Accuracy: {curr_worst2}, Best Average Accuracy: {curr_avg1}")
             if inv_acc > curr_avg1 or (inv_acc == curr_avg1 and worst_acc >= curr_worst1):
                 curr_avg1 = inv_acc
                 curr_worst1 = worst_acc

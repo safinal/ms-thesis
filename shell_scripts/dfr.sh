@@ -1,8 +1,14 @@
-uv run main.py --output_path ./logs --dataset celeba --dataset_path datasets/celeba-dataset --experiment DFR --sample_size 20 -b 512 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/celeba/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.00 --epochs 100 --optimizer adam --step_size 85 --seed 0
-# uv run main.py --output_path ./logs --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --experiment DFR --sample_size 20 -b 256 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/waterbirds/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.01 --epochs 100 --optimizer adam --step_size 85 --seed 0
-# uv run main.py --output_path ./logs --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --experiment DFR --sample_size 20 -b 256 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/waterbirds/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.02 --epochs 100 --optimizer adam --step_size 85 --seed 0
-# uv run main.py --output_path ./logs --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --experiment DFR --sample_size 20 -b 256 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/waterbirds/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.03 --epochs 100 --optimizer adam --step_size 85 --seed 0
-# uv run main.py --output_path ./logs --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --experiment DFR --sample_size 20 -b 256 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/waterbirds/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.04 --epochs 100 --optimizer adam --step_size 85 --seed 0
-# uv run main.py --output_path ./logs --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --experiment DFR --sample_size 20 -b 256 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/waterbirds/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.05 --epochs 100 --optimizer adam --step_size 85 --seed 0
-# uv run main.py --output_path ./logs --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --experiment DFR --sample_size 20 -b 256 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/waterbirds/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.06 --epochs 100 --optimizer adam --step_size 85 --seed 0
-# uv run main.py --output_path ./logs --dataset waterbirds --dataset_path datasets/waterbird_complete95_forest2water2 --experiment DFR --sample_size 20 -b 256 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/waterbirds/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.07 --epochs 100 --optimizer adam --step_size 85 --seed 0
+uv run main.py \
+    --output_path logs \
+    --dataset celeba \
+    --dataset_path datasets/celeba-dataset \
+    --experiment DFR \
+    --sample_size 128 \
+    --batch_size 512 \
+    --learning_rate 0.001 \
+    --pretrained_path checkpoints/dfr-ckpts/celeba/erm_seed1/final_checkpoint.pt \
+    --l1 0.00 \
+    --epochs 100 \
+    --optimizer adam \
+    --step_size 30 \
+    --seed 0

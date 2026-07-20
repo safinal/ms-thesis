@@ -1,1 +1,15 @@
-uv run main.py --output_path ./logs --dataset celeba --dataset_path datasets/celeba-dataset --experiment CVA --sample_size 20 -b 512 -lr 0.0005 --pretrained_path checkpoints/dfr-ckpts/celeba/erm_seed1/final_checkpoint.pt --gamma 0.5 --weight_decay 0.0001 --l1 0.00 --epochs 100 --optimizer adam --step_size 85 --seed 0 --balanced_dataset_path datasets/celeba_edited_flux2_klein_4b
+uv run main.py \
+    --output_path logs \
+    --dataset celeba \
+    --dataset_path datasets/celeba-dataset \
+    --experiment CVA \
+    --sample_size 128 \
+    --batch_size 512 \
+    --learning_rate 0.005 \
+    --pretrained_path checkpoints/dfr-ckpts/celeba/erm_seed5/final_checkpoint.pt \
+    --l1 0.01 \
+    --epochs 100 \
+    --optimizer adam \
+    --step_size 30 \
+    --seed 5 \
+    --balanced_dataset_path datasets/celeba_edited_flux2_klein_4b

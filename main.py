@@ -1,8 +1,7 @@
-import sys
 import argparse
+import numpy as np
 import torch
 import torch.optim as optim
-import torch.optim.lr_scheduler as lr_scheduler
 import torchvision
 import exps
 import data
@@ -10,15 +9,15 @@ import utils
 import _test as test
 import run
 import os
-import models
 import random
 import numpy as np
 import json
 import copy
+from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
+
+
 from train import *
 from _test import *
-import numpy as np
-from data.feature_dataset import get_feature_loader
 
 
 def generate_optimizer_and_scheduler(model, learning_rate, step_size, gamma, optimizer_type, l2=0):
@@ -31,8 +30,8 @@ def generate_optimizer_and_scheduler(model, learning_rate, step_size, gamma, opt
     else:
         raise ValueError("Invalid optimizer type. Supported options are 'adam', 'adamW', and 'SGD'.")
 
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10, eta_min=1e-5)
+    scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)
+    # scheduler = CosineAnnealingLR(optimizer, 10, eta_min=1e-5)
     return optimizer, scheduler
 
 
@@ -43,7 +42,7 @@ def get_dataset_loaders(args):
     if args.feature_only:
         if args.validation_path:
             print ('Loading validation data from the provided path.')
-            return data.get_feature_loaders(args.dataset_path, args.batch_size, validation_path = args.validation_path)
+            return data.get_feature_loaders(args.dataset_path, args.batch_size, validation_path=args.validation_path)
         else:
             return data.get_feature_loaders(args.dataset_path, args.batch_size)
 
@@ -114,12 +113,14 @@ def get_early_stop_valloaders(model, args, trainloader, valloader, path):
             train_early_stop(val_model, trainloader, valloader)
             torch.save (val_model.state_dict(), save_path)
 
-        _, _, miscls_envs, corrcls_envs = test.test_cnn(valloader, val_model, return_samples=True,
-                                                                      args=args)
-        new_valloader = experiment.create_balanced_dataloader_val(miscls_envs, corrcls_envs,
-                                                                     sample_size=99999999999,
-                                                                     model=val_model, batch_size=valloader.batch_size,
-                                                                     for_free=args.for_free)
+        _, _, miscls_envs, corrcls_envs = test.test_cnn(valloader, val_model, return_samples=True, args=args)
+        new_valloader = experiment.create_balanced_dataloader_val(
+            miscls_envs, corrcls_envs,
+            sample_size=99999999999,
+            model=val_model, 
+            batch_size=valloader.batch_size,
+            for_free=args.for_free
+        )
 
         print('validation labels:', new_valloader.dataset.tensors[1].argmax(1).unique(return_counts=True), sep='\n')
         print('validation groups:', new_valloader.dataset.tensors[2].argmax(1).unique(return_counts=True), sep='\n')
@@ -143,23 +144,29 @@ def get_cls_valloaders (model, args, valloader):
         if args.error_splitting:
             reinit = False
         ret = freeze_model(model, reinit=reinit)
-        avg_acc, worst_acc, miscls_envs, corrcls_envs = test.test_cnn(valloader, ret, return_samples=True,
-                                                                      args=args)
+        avg_acc, worst_acc, miscls_envs, corrcls_envs = test.test_cnn(valloader, ret, return_samples=True, args=args)
         for g in range(n_envs):
             print(f'for env{g}:\n\tmiscls:', end=' ')
             print(len(miscls_envs[g]))
             print('\tcorrcls:', end=' ')
             print(len(corrcls_envs[g]))
         if not args.random_grouping:
-            random_valloader = experiment.create_balanced_dataloader_val(miscls_envs, corrcls_envs, sample_size=99999999999,
-                                                                  model=ret, batch_size=valloader.batch_size,
-                                                                  for_free=args.for_free)
+            random_valloader = experiment.create_balanced_dataloader_val(
+                miscls_envs, 
+                corrcls_envs, 
+                sample_size=99999999999,
+                model=ret, 
+                batch_size=valloader.batch_size,
+                for_free=args.for_free
+            )
         else:
-            random_valloader = experiment.create_balanced_random_dataloader({0: miscls_envs[0] + miscls_envs[1] +
-                                                                         corrcls_envs[0] + corrcls_envs[1],
-                                                                      1: miscls_envs[2] + miscls_envs[3] +
-                                                                         corrcls_envs[2] + corrcls_envs[3]},
-                                                                     batch_size=valloader.batch_size)
+            random_valloader = experiment.create_balanced_random_dataloader(
+                {
+                    0: miscls_envs[0] + miscls_envs[1] + corrcls_envs[0] + corrcls_envs[1],
+                    1: miscls_envs[2] + miscls_envs[3] + corrcls_envs[2] + corrcls_envs[3]
+                },
+                batch_size=valloader.batch_size
+            )
         print('validation labels:', random_valloader.dataset.tensors[1].argmax(1).unique(return_counts=True), sep='\n')
         print('validation groups:', random_valloader.dataset.tensors[2].argmax(1).unique(return_counts=True), sep='\n')
 
@@ -170,7 +177,7 @@ def get_cls_valloaders (model, args, valloader):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Spurious Correlation Experiment')
     parser.add_argument('--root_dir', default=None)
-    parser.add_argument('--learning_rate', '-lr', type=float, default=0.001)
+    parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'adamW', 'SGD'])
     parser.add_argument('--experiment', type=str, required=True, choices=['ERM', 'DFR', 'loss', 'cluster', 'entropy', 'gradcam', 'CVA'])
     parser.add_argument('--dataset', type=str, required=True, choices=['waterbirds', 'celeba', 'urbancars'])
@@ -184,8 +191,8 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, default=0.1, help='Gamma for LR scheduler')
     parser.add_argument('--epochs', type=int, default=30, help='Number of epochs')
     parser.add_argument('--pretrained_path', type=str, default=None, help='Path of the pretrained model file')
-    parser.add_argument('--batch_size', '-b', type=int, default=128)
-    parser.add_argument('--num_workers', type=int, default=8, help='Number of CPU cores to use')
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--num_workers', type=int, default=4, help='Number of CPU cores to use')
     parser.add_argument('--test_only', type=bool, default=False, help='Just test the specified model on the dataset')
     parser.add_argument('--log', type=bool, default=True, help='Whether log the experiment on wandb or not')
     parser.add_argument('--for_free', type=bool, default=False, help='choose the best model based on group-inferred validation data')
@@ -203,8 +210,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    save_dir = os.path.join(args.output_path,
-                            f"{args.experiment}_{args.comments}_{args.dataset}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}/")
+    save_dir = os.path.join(
+        args.output_path,
+        f"{args.experiment}_{args.comments}_{args.dataset}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}_feature-{args.feature_only}/"
+    )
 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -235,7 +244,7 @@ if __name__ == '__main__':
     if args.feature_only:
         n = data.dataset_specs.datasets[args.dataset]['num_classes']
         d = data.dataset_specs.datasets[args.dataset]['hidden_layer_size']
-        model = utils.get_fc(device, args.pretrained_path, num_features = d, num_classes=n)
+        model = utils.get_fc(device, args.pretrained_path, num_features=d, num_classes=n)
     else:
         model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
 
@@ -264,7 +273,8 @@ if __name__ == '__main__':
                 batch_size=args.batch_size,
                 dataloader=lastlayerloader, 
                 dataset=args.dataset, 
-                balanced_dataset_path=args.balanced_dataset_path
+                balanced_dataset_path=args.balanced_dataset_path,
+                feature_only=args.feature_only
             )
             # print('lastlayer labels:', balanced_loader.dataset.tensors[1].argmax(1).unique(return_counts=True), sep='\n')
             # print('lastlayer groups:', balanced_loader.dataset.tensors[2].argmax(1).unique(return_counts=True), sep='\n')
@@ -288,8 +298,14 @@ if __name__ == '__main__':
             else:
                 valloaders = [valloader]
 
-        optimizer, scheduler = generate_optimizer_and_scheduler(model, args.learning_rate, args.step_size,
-                                                                args.gamma, args.optimizer, args.weight_decay)
+        optimizer, scheduler = generate_optimizer_and_scheduler(
+            model, 
+            args.learning_rate, 
+            args.step_size,
+            args.gamma, 
+            args.optimizer, 
+            args.weight_decay
+        )
         
         valloaders = [valloader]
         if args.experiment != 'ERM':
@@ -298,15 +314,31 @@ if __name__ == '__main__':
             else:
                 model = freeze_model(model, reinit=True)
 
-            result = run.run_last_layer_experiment(model, device, balanced_loader, valloaders,
-                                                   args.experiment,
-                                                   optimizer, args.l1, scheduler, dataset=args.dataset,
-                                                   epochs=args.epochs, seed=args.seed, args=args)
+            result = run.run_last_layer_experiment(
+                model, 
+                device, 
+                balanced_loader, 
+                valloaders,
+                optimizer, 
+                args.l1, 
+                scheduler, 
+                epochs=args.epochs, 
+                args=args,
+                save_dir=save_dir
+            )
         else:
-            result = run.run_last_layer_experiment(model, device, trainloader, valloaders,
-                                                       args.experiment,
-                                                       optimizer, args.l1, scheduler, dataset=args.dataset,
-                                                       epochs=args.epochs, seed=args.seed, args=args)
+            result = run.run_last_layer_experiment(
+                model, 
+                device, 
+                trainloader, 
+                valloaders,
+                optimizer, 
+                args.l1, 
+                scheduler, 
+                epochs=args.epochs, 
+                args=args,
+                save_dir=save_dir
+            )
         print(f'Best model saved at {result}')
 
         if args.feature_only:
@@ -331,7 +363,7 @@ if __name__ == '__main__':
         if args.for_free:
             val_avg, val_worst = run.multi_eval(test_model, valloaders, False, args)
         else:
-            val_avg, val_worst = test.test_cnn(valloader, test_model, return_samples=False, args=args, inferred_groups=True) # TODO
+            val_avg, val_worst = test.test_cnn(valloader, test_model, return_samples=False, args=args, inferred_groups=True)
 
         test_avg, test_worst = test.test_cnn(testloader, test_model, return_samples=False, args=args, inferred_groups=False)
 
