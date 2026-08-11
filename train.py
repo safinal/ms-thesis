@@ -24,11 +24,12 @@ def train_cnn(dataloader, model, opt, scheduler, step, device, l1_lambda, log=Tr
         logits = model(inputs)
         
         total_loss = criterion(logits, labels.float())
-        
+
         if l1_lambda != 0:
             fc = model.model.fc if hasattr(model, "model") else model.fc
             l1_reg = torch.sum(torch.abs(fc.weight))
             total_loss += l1_lambda * l1_reg
+        
             
         total_loss.backward()
         opt.step()

@@ -235,3 +235,4 @@ mlflow.db
 .kaggle/
 .megaCmd/
 .wget-hsts
+shell_scripts/

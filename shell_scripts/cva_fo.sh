@@ -22,8 +22,9 @@ for SEED in {1..5}; do
             --epochs 100 \
             --optimizer adam \
             --step_size 30 \
+            --gamma 1.0 \
             --seed "${SEED}" \
-            --balanced_dataset_path "datasets_features/celeba_edited_flux2_klein_4b/noaug_features_seed${SEED}" \
+            --balanced_dataset_path "datasets_features/celeba_edited_flux2_klein_9b/noaug_features_seed${SEED}" \
             --feature_only True
     done
 done

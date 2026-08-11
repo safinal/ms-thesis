@@ -176,7 +176,6 @@ def get_cls_valloaders (model, args, valloader):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Spurious Correlation Experiment')
-    parser.add_argument('--root_dir', default=None)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'adamW', 'SGD'])
     parser.add_argument('--experiment', type=str, required=True, choices=['ERM', 'DFR', 'loss', 'cluster', 'entropy', 'gradcam', 'CVA'])
@@ -209,10 +208,11 @@ if __name__ == '__main__':
 
 
     args = parser.parse_args()
-
+    
+    editing_model_name = args.balanced_dataset_path.split('/')[-2] if args.balanced_dataset_path is not None else None
     save_dir = os.path.join(
         args.output_path,
-        f"{args.experiment}_{args.comments}_{args.dataset}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}_feature-{args.feature_only}/"
+        f"{args.experiment}_{args.comments}_{args.dataset}_opt-{args.optimizer}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}_feature-{args.feature_only}_editing-{editing_model_name}/"
     )
 
     if not os.path.exists(save_dir):
@@ -255,7 +255,7 @@ if __name__ == '__main__':
     else:
         if args.experiment != 'ERM':
             print ('Accuracy of ERM on the test set')
-            _,_ = test.test_cnn(testloader, model, return_samples=False, args=args, inferred_groups=False)
+            _, _ = test.test_cnn(testloader, model, return_samples=False, args=args, inferred_groups=False)
 
             # model = freeze_model(model) # Uncomment if you want to infer lastlayer based on random classifier
             experiment = generate_experiment(args, model)

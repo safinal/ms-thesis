@@ -373,8 +373,11 @@ def generate_counterfactuals(args):
     print(f"Generating counterfactuals for {args.dataset} split...")
     
     generator = torch.Generator(device=device).manual_seed(args.seed)
-    species_rng = random.Random(args.seed)
-    metadata_df = pd.DataFrame(columns=['img_filename', 'y', 'species'])
+    if args.dataset == 'waterbirds':
+        species_rng = random.Random(args.seed)
+        metadata_df = pd.DataFrame(columns=['img_filename', 'y', 'species'])
+    else:
+        metadata_df = pd.DataFrame(columns=['img_filename', 'y'])
 
     for data in tqdm(dataloader):
         if args.dataset == 'waterbirds':
@@ -414,7 +417,7 @@ def generate_counterfactuals(args):
         metadata_df = pd.concat(
             (
                 metadata_df, 
-                pd.DataFrame({'img_filename': img_name_lst, 'y': labels_lst, 'species': species_lst})
+                pd.DataFrame({'img_filename': img_name_lst, 'y': labels_lst, 'species': species_lst} if args.dataset == 'waterbirds' else {'img_filename': img_name_lst, 'y': labels_lst})
             )
         ).sample(frac=1)
         metadata_df.to_csv(os.path.join(args.output_dir, "metadata.csv"), index=False)

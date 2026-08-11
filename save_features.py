@@ -3,7 +3,7 @@ import argparse
 import os
 from tqdm import tqdm
 
-from data import get_waterbirds_loaders, get_celeba_loaders, get_urbancars_loaders, CelebADataset
+from data import get_waterbirds_loaders, get_celeba_loaders, get_urbancars_loaders, CelebADataset, WaterbirdDataset
 from utils import get_pretrained_resnet50
 
 
@@ -22,11 +22,11 @@ def get_dataset_loaders(args):
 def get_dataset_loader(args):
     if args.dataset == 'celeba':
         dataset = CelebADataset(phase=None, dataset_dir=args.dataset_path, spuriousity=95, transform='test', sample_size=args.sample_size)
-        return torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    # elif args.dataset == 'waterbirds':
-    #     pass
+    elif args.dataset == 'waterbirds':
+        dataset = WaterbirdDataset(split='last_layer', transform='test', dataset_dir=args.dataset_path, num_classes=2, spuriousity=95, sample_size=args.sample_size)
     # elif args.dataset == 'urbancars':
     #     pass
+    return torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     
 
 #source: https://github.com/PolinaKirichenko/deep_feature_reweighting/blob/main/dfr_evaluate_spurious.py

@@ -17,8 +17,6 @@ from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
 class UrbanCars(Dataset):
-    base_folder = "urbancars_images"
-
     obj_name_list = [
         "urban",
         "country",
@@ -55,7 +53,7 @@ class UrbanCars(Dataset):
         self.bg_ratio = bg_ratio
         self.co_occur_obj_ratio = co_occur_obj_ratio
 
-        assert os.path.exists(os.path.join(root, self.base_folder))
+        assert os.path.exists(root)
 
         super().__init__()
         assert group_label in ["bg", "co_occur_obj", "both"]
@@ -69,7 +67,7 @@ class UrbanCars(Dataset):
             f"bg-{bg_ratio}_co_occur_obj-{co_occur_obj_ratio}"
         )
         img_root = os.path.join(
-            root, self.base_folder, ratio_combination_folder_name, split
+            root, ratio_combination_folder_name, split
         )
 
         self.img_fpath_list = []

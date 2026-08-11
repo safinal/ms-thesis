@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 class WaterbirdDataset(torch.utils.data.Dataset):
-    def __init__(self, split, transform, dataset_dir='waterbird_complete_forest2water2', spuriousity=95, **kwargs):
+    def __init__(self, split, transform = 'train', dataset_dir='waterbird_complete_forest2water2', spuriousity=95, sample_size=None, **kwargs):
         assert 'num_classes' in kwargs.keys(), 'num_classes missing in class arguments'
         self.split_dict = {
             'train': 0,
@@ -34,13 +34,27 @@ class WaterbirdDataset(torch.utils.data.Dataset):
             # f'balanced_metadata{spuriousity}_with_additional_last_layer.csv')
             # wb_official_metadata_20LL
             )
-        self.metadata_df = self.metadata_df[self.metadata_df['split']==self.split_dict[self.split]]
+        if 'split' in self.metadata_df.columns:
+            self.metadata_df = self.metadata_df[self.metadata_df['split']==self.split_dict[self.split]]
+        if sample_size is not None:
+            metadata_df = pd.DataFrame(columns=[self.metadata_df.columns])
+            for label in range(2):
+                temp1 = self.metadata_df[self.metadata_df['y'] == label].sample(n=sample_size)
+                temp2 = temp1.copy()
+                temp2['img_filename'] = temp2['img_filename'].map(lambda x: x.replace('_aug', '') if '_aug' in x else x.split('.')[0] + '_aug' + x[-4:])
+                temp2['y'] = int(not label)
+                metadata_df = pd.concat((metadata_df, temp1, temp2))
+            self.metadata_df = metadata_df
 
         y_array = torch.Tensor(np.array(self.metadata_df['y'].values)).type(torch.LongTensor)
         self.y_array = self.metadata_df['y'].values
 
         self.place_array = self.metadata_df['place'].values if 'place' in self.metadata_df.columns else None
         self.filename_array = self.metadata_df['img_filename'].values
+        if transform == 'train':
+            transform = get_transform_cub(True)
+        elif transform == 'test':
+            transform = get_transform_cub(False)
         self.transform = transform
 
         self.y_one_hot = torch.nn.functional.one_hot(y_array, num_classes=kwargs['num_classes']).type(torch.FloatTensor)
@@ -86,11 +100,6 @@ def get_waterbird_dataloader(dataset_dir, split, transform, batch_size, spurious
 
     return dataloader
 
-def get_waterbird_dataset(split, transform, spuriousity):
-    dataset = WaterbirdDataset(split=split, transform=transform, spuriousity=spuriousity)
-    return dataset
-
-
 def get_transform_cub(train):
     scale = 256.0/224.0
     target_resolution = [224, 224]
@@ -132,10 +141,8 @@ def get_transform_cub(train):
 
 def get_waterbirds_loaders(dataset_dir, spuriousity=95, **kwargs):
     assert 'batch_size' in kwargs.keys(), 'Unspecified batch_size in kwargs'
-    t_train =  get_transform_cub(True)
-    t_tst = get_transform_cub(False)
-    trainloader = get_waterbird_dataloader(dataset_dir, 'train', t_train, kwargs['batch_size'], spuriousity)
-    lastlayerloader = get_waterbird_dataloader(dataset_dir, 'last_layer', t_tst, kwargs['batch_size'], spuriousity)
-    valloader = get_waterbird_dataloader(dataset_dir, 'val', t_tst, kwargs['batch_size'], spuriousity)
-    testloader = get_waterbird_dataloader(dataset_dir, 'test', t_tst, kwargs['batch_size'], spuriousity)
+    trainloader = get_waterbird_dataloader(dataset_dir, 'train', 'train', kwargs['batch_size'], spuriousity)
+    lastlayerloader = get_waterbird_dataloader(dataset_dir, 'last_layer', 'test', kwargs['batch_size'], spuriousity)
+    valloader = get_waterbird_dataloader(dataset_dir, 'val', 'test', kwargs['batch_size'], spuriousity)
+    testloader = get_waterbird_dataloader(dataset_dir, 'test', 'test', kwargs['batch_size'], spuriousity)
     return trainloader, lastlayerloader, valloader, testloader

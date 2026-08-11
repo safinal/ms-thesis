@@ -16,12 +16,13 @@ for SEED in {1..5}; do
             --experiment DFR \
             --sample_size 128 \
             --batch_size 512 \
-            --learning_rate 0.01 \
+            --learning_rate 0.005 \
             --pretrained_path "checkpoints/dfr-ckpts/celeba/erm_seed${SEED}/final_checkpoint.pt" \
             --l1 "${L1}" \
             --epochs 100 \
             --optimizer adam \
             --step_size 30 \
+            --gamma 1.0 \
             --seed "${SEED}" \
             --feature_only True
     done
