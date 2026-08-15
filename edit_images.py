@@ -409,6 +409,8 @@ def generate_counterfactuals(args):
         labels_lst = []
         for edited_img, img_path, label in zip(outputs, img_paths, labels):
             img_name = os.path.basename(img_path)
+            if args.dataset == 'urbancars':
+                img_name = f"{img_path.strip("/").split("/")[-2]}_{img_name}"
             shutil.copyfile(img_path, os.path.join(args.output_dir, img_name))
             img_name_lst.append(img_name)
             labels_lst.append(label.item())
