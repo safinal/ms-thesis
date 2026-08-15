@@ -5,7 +5,7 @@ from PIL import Image
 from tqdm import tqdm
 from diffusers import AutoPipelineForImage2Image, Flux2KleinPipeline
 import shutil
-from data import CelebADataset, WaterbirdDataset
+from data import CelebADataset, WaterbirdDataset, UrbanCarsDataset
 import types
 import pandas as pd
 import random
@@ -233,14 +233,10 @@ EDIT_CONFIGS = {
         0: "Change the hair color of this person to Blond, keep everything else the in the photo the same, only change the hair color.",
         1: "Change the hair color of this person to a Non-Blond color (Black/Brown/Gray), keep everything else the in the photo the same, only change the hair color."
     },
-    # "waterbirds": {
-    #     0: "",
-    #     1: ""
-    # },
-    # "urbancars": {
-    #     0: "Replace the vehicle in this image with a sleek urban or city car (like a compact sedan or sports car). The background buildings, streets, nature, and any co-occurring objects must remain absolutely identical.",
-    #     1: "Replace the vehicle in this image with a rugged country or rural vehicle (like a pickup truck or off-road SUV). The background buildings, streets, nature, and any co-occurring objects must remain absolutely identical."
-    # }
+    "urbancars": {
+        0: "Replace the vehicle in this image with a country/rural vehicle. The background and any co-occurring objects must remain absolutely identical.",
+        1: "Replace the vehicle in this image with an urban/city car. The background and any co-occurring objects must remain absolutely identical."
+    }
 }
 
 MODEL_CONFIGS = {
@@ -272,6 +268,14 @@ class CustomWaterbirdDataset(WaterbirdDataset):
         species = self.filename_array[idx].split('/')[0].split('.')[1].replace('_', ' ')
         return img_path, img, label, species
 
+class CustomUrbanCarsDataset(UrbanCarsDataset):
+    def __getitem__(self, idx):
+        img_path = self.img_fpath_list[idx]
+        img = Image.open(img_path).convert('RGB')
+        label = self.obj_label[idx]
+        return img_path, img, label
+
+
 def waterbird_collate_fn(batch):
     """Collate that keeps PIL images and species strings intact."""
     img_paths = [item[0] for item in batch]
@@ -294,13 +298,13 @@ def get_dataloader(args):
     if args.dataset == 'celeba':
         dataset = CustomCelebADataset(phase='last_layer', dataset_dir=args.dataset_path, spuriousity=95, transform=None)
         dataloader = torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, collate_fn=pil_collate_fn)
-        return dataloader
     elif args.dataset == 'waterbirds':
         dataset = CustomWaterbirdDataset(split='last_layer', transform=None, dataset_dir=args.dataset_path, num_classes=2, spuriousity=95)
         dataloader = torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, collate_fn=waterbird_collate_fn)
-        return dataloader
-    # elif args.dataset == 'urbancars':
-    #     return get_urbancars_loaders(args.dataset_path, args.batch_size, "both")[1]
+    elif args.dataset == 'urbancars':
+        dataset = CustomUrbanCarsDataset(args.dataset_path, "lastlayer", transform=None)
+        dataloader = torch.utils.data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, collate_fn=pil_collate_fn)
+    return dataloader
 
 
 def _prepare_image_latents_independent(self, images, batch_size, generator, device, dtype):

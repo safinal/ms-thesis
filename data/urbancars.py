@@ -9,14 +9,12 @@ LICENSE file in the root directory of this source tree.
 import os
 import glob
 import torch
+import torchvision
 import random
-
-
 from PIL import Image
-from torch.utils.data import Dataset
-import torchvision.transforms as transforms
 
-class UrbanCars(Dataset):
+
+class UrbanCarsDataset(torch.utils.data.Dataset):
     obj_name_list = [
         "urban",
         "country",
@@ -63,37 +61,25 @@ class UrbanCars(Dataset):
         self.return_dist_shift = return_dist_shift
         self.split = split
 
-        ratio_combination_folder_name = (
-            f"bg-{bg_ratio}_co_occur_obj-{co_occur_obj_ratio}"
-        )
-        img_root = os.path.join(
-            root, ratio_combination_folder_name, split
-        )
+        ratio_combination_folder_name = f"bg-{bg_ratio}_co_occur_obj-{co_occur_obj_ratio}"
+        img_root = os.path.join(root, ratio_combination_folder_name, split)
 
         self.img_fpath_list = []
         self.obj_bg_co_occur_obj_label_list = []
 
         for obj_id, obj_name in enumerate(self.obj_name_list):
             for bg_id, bg_name in enumerate(self.bg_name_list):
-                for co_occur_obj_id, co_occur_obj_name in enumerate(
-                    self.co_occur_obj_name_list
-                ):
-                    dir_name = (
-                        f"obj-{obj_name}_bg-{bg_name}_co_occur_obj-{co_occur_obj_name}"
-                    )
+                for co_occur_obj_id, co_occur_obj_name in enumerate(self.co_occur_obj_name_list):
+                    dir_name = f"obj-{obj_name}_bg-{bg_name}_co_occur_obj-{co_occur_obj_name}"
                     dir_path = os.path.join(img_root, dir_name)
                     assert os.path.exists(dir_path)
 
                     img_fpath_list = glob.glob(os.path.join(dir_path, "*.jpg"))
                     self.img_fpath_list += img_fpath_list
 
-                    self.obj_bg_co_occur_obj_label_list += [
-                        (obj_id, bg_id, co_occur_obj_id)
-                    ] * len(img_fpath_list)
+                    self.obj_bg_co_occur_obj_label_list += [(obj_id, bg_id, co_occur_obj_id)] * len(img_fpath_list)
 
-        self.obj_bg_co_occur_obj_label_list = torch.tensor(
-            self.obj_bg_co_occur_obj_label_list, dtype=torch.long
-        )
+        self.obj_bg_co_occur_obj_label_list = torch.tensor(self.obj_bg_co_occur_obj_label_list, dtype=torch.long)
 
         self.obj_label = self.obj_bg_co_occur_obj_label_list[:, 0]
         bg_label = self.obj_bg_co_occur_obj_label_list[:, 1]
@@ -230,22 +216,22 @@ class UrbanCars(Dataset):
 
 def get_transforms(arch, is_training):
     if arch.startswith("resnet"):
-        normalize = transforms.Normalize(
+        normalize = torchvision.transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         )
 
         if is_training:
-            transform = transforms.Compose(
+            transform = torchvision.transforms.Compose(
                 [
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ToTensor(),
+                    torchvision.transforms.RandomHorizontalFlip(),
+                    torchvision.transforms.ToTensor(),
                     normalize,
                 ]
             )
         else:
-            transform = transforms.Compose(
+            transform = torchvision.transforms.Compose(
                 [
-                    transforms.ToTensor(),
+                    torchvision.transforms.ToTensor(),
                     normalize,
                 ]
             )
@@ -275,7 +261,7 @@ def get_urbancars_loaders(root, batch_size, group_label):
 
     train_transform = _get_train_transform()
     test_transform = get_transforms("resnet50", is_training=False)
-    train_set = UrbanCars(
+    train_set = UrbanCarsDataset(
         root,
         "train",
         group_label=group_label,
@@ -284,17 +270,17 @@ def get_urbancars_loaders(root, batch_size, group_label):
         return_domain_label=False,
         return_dist_shift=False,
     )
-    ll_set = UrbanCars(
+    ll_set = UrbanCarsDataset(
         root,
         "lastlayer",
         transform=test_transform,
     )
-    val_set = UrbanCars(
+    val_set = UrbanCarsDataset(
         root,
         "val",
         transform=test_transform,
     )
-    test_set = UrbanCars(
+    test_set = UrbanCarsDataset(
         root,
         "test",
         transform=test_transform,
