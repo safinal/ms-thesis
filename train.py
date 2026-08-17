@@ -1,10 +1,9 @@
-from torch import nn
 from tqdm import tqdm
 import torch
 
 
 def train_cnn(dataloader, model, opt, scheduler, step, device, l1_lambda, log=True):
-    criterion = nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss()
     
     ### average loss
     avg_acc = 0.0

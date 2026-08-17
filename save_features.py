@@ -3,7 +3,7 @@ import argparse
 import os
 from tqdm import tqdm
 
-from data import get_waterbirds_loaders, get_celeba_loaders, get_urbancars_loaders, CelebADataset, WaterbirdDataset
+from data import get_waterbirds_loaders, get_celeba_loaders, get_urbancars_loaders, CelebADataset, WaterbirdDataset, SimpleUrbanCarsDataset
 from utils import get_pretrained_resnet50
 
 
@@ -24,8 +24,8 @@ def get_dataset_loader(args):
         dataset = CelebADataset(phase=None, dataset_dir=args.dataset_path, spuriousity=95, transform='test', sample_size=args.sample_size)
     elif args.dataset == 'waterbirds':
         dataset = WaterbirdDataset(split='last_layer', transform='test', dataset_dir=args.dataset_path, num_classes=2, spuriousity=95, sample_size=args.sample_size)
-    # elif args.dataset == 'urbancars':
-    #     pass
+    elif args.dataset == 'urbancars':
+        dataset = SimpleUrbanCarsDataset(root_dir_path=args.dataset_path, sample_size=args.sample_size)
     return torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     
 

@@ -11,8 +11,8 @@ import glob
 import torch
 import torchvision
 import random
+import pandas as pd
 from PIL import Image
-
 
 class UrbanCarsDataset(torch.utils.data.Dataset):
     obj_name_list = [
@@ -55,6 +55,10 @@ class UrbanCarsDataset(torch.utils.data.Dataset):
 
         super().__init__()
         assert group_label in ["bg", "co_occur_obj", "both"]
+        if transform == 'train':
+            transform = get_transforms("resnet50", is_training=True)
+        elif transform == 'test':
+            transform = get_transforms("resnet50", is_training=False)
         self.transform = transform
         self.return_group_index = return_group_index
         self.return_domain_label = return_domain_label
@@ -180,24 +184,23 @@ class UrbanCarsDataset(torch.utils.data.Dataset):
         img_fpath = self.img_fpath_list[index]
         y = self.y[index]
 
-        img = Image.open(img_fpath)
-        img = img.convert("RGB")
+        img = Image.open(img_fpath).convert("RGB")
         if self.transform is not None:
             img = self.transform(img)
 
-        data_dict = {
-            "image": img,
-            "label": y,
-        }
+        # data_dict = {
+        #     "image": img,
+        #     "label": y,
+        # }
 
-        if self.return_group_index:
-            data_dict["group_index"] = self.group_array[index]
+        # if self.return_group_index:
+        #     data_dict["group_index"] = self.group_array[index]
 
-        if self.return_domain_label:
-            data_dict["domain_label"] = self.domain_label[index]
+        # if self.return_domain_label:
+        #     data_dict["domain_label"] = self.domain_label[index]
 
-        if self.return_dist_shift:
-            data_dict["dist_shift"] = 0
+        # if self.return_dist_shift:
+        #     data_dict["dist_shift"] = 0
 
         return img, y, self.group_array[index]
 
@@ -213,6 +216,33 @@ class UrbanCarsDataset(torch.utils.data.Dataset):
         group_weights = len(self) / group_counts
         weights = group_weights[self.group_array]
         return weights
+
+class SimpleUrbanCarsDataset(torch.utils.data.Dataset):
+    def __init__(self, root_dir_path, sample_size=None):
+        self.root_dir_path = root_dir_path
+        self.metadata_df = pd.read_csv(os.path.join(root_dir_path, 'metadata.csv'))
+        self.y = torch.nn.functional.one_hot(torch.tensor(self.metadata_df["y"].to_numpy()), num_classes=2).type(torch.FloatTensor)
+        self.transform = get_transforms("resnet50", is_training=False)
+
+        if sample_size is not None:
+            metadata_df = pd.DataFrame(columns=self.metadata_df.columns)
+            for label in range(2):
+                temp1 = self.metadata_df[self.metadata_df['y'] == label].sample(n=sample_size)
+                temp2 = temp1.copy()
+                temp2['img_filename'] = temp2['img_filename'].map(lambda x: x.replace('_aug', '') if '_aug' in x else x.split('.')[0] + '_aug' + x[-4:])
+                temp2['y'] = int(not label)
+                metadata_df = pd.concat((metadata_df, temp1, temp2))
+            self.metadata_df = metadata_df
+
+    def __len__(self):
+        return len(self.metadata_df)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.root_dir_path, self.metadata_df["img_filename"].iloc[idx])
+        img = Image.open(img_path).convert("RGB")
+        if self.transform is not None:
+            img = self.transform(img)
+        return img, self.y[idx]
 
 def get_transforms(arch, is_training):
     if arch.startswith("resnet"):
@@ -253,19 +283,12 @@ def _get_train_loader(batch_size, train_set):
         )
         return train_loader
 
-def _get_train_transform():
-    train_transform = get_transforms("resnet50", is_training=True)
-    return train_transform
-
 def get_urbancars_loaders(root, batch_size, group_label):
-
-    train_transform = _get_train_transform()
-    test_transform = get_transforms("resnet50", is_training=False)
     train_set = UrbanCarsDataset(
         root,
         "train",
         group_label=group_label,
-        transform=train_transform,
+        transform='train',
         return_group_index=True,
         return_domain_label=False,
         return_dist_shift=False,
@@ -273,17 +296,17 @@ def get_urbancars_loaders(root, batch_size, group_label):
     ll_set = UrbanCarsDataset(
         root,
         "lastlayer",
-        transform=test_transform,
+        transform='test',
     )
     val_set = UrbanCarsDataset(
         root,
         "val",
-        transform=test_transform,
+        transform='test',
     )
     test_set = UrbanCarsDataset(
         root,
         "test",
-        transform=test_transform,
+        transform='test',
     )
     obj_name_list = train_set.obj_name_list
     num_class = len(obj_name_list)

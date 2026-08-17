@@ -1,12 +1,9 @@
 import os
-
 import numpy as np
 import torch
-import torchvision.transforms as transforms
-
+import torchvision
 from PIL import Image
 from sklearn.model_selection import train_test_split
-from torch.utils.data import Dataset, DataLoader
 
 
 class Subset(torch.utils.data.Dataset):
@@ -52,7 +49,7 @@ class Subset(torch.utils.data.Dataset):
             return self.label_array
 
 
-class MetaDatasetCatDog(Dataset):
+class MetaDatasetCatDog(torch.utils.data.Dataset):
     """
     MetaShift data.
     `cat` is correlated with (`sofa`, `bed`), and `dog` is correlated with (`bench`, `bike`);
@@ -200,25 +197,25 @@ class MetaDatasetCatDog(Dataset):
 def get_transform_metashift(train):
     scale = 256.0 / 224.0
     target_resolution = (224, 224)
-    normalize = transforms.Normalize([0.485, 0.456, 0.406],
+    normalize = torchvision.transforms.Normalize([0.485, 0.456, 0.406],
                                      [0.229, 0.224, 0.225])
     if not train:
-        transform = transforms.Compose([
-            transforms.Resize((int(target_resolution[0] * scale),
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((int(target_resolution[0] * scale),
                                int(target_resolution[1] * scale))),
-            transforms.CenterCrop(target_resolution),
-            transforms.ToTensor(),
+            torchvision.transforms.CenterCrop(target_resolution),
+            torchvision.transforms.ToTensor(),
             normalize
         ])
     else:
-        transform = transforms.Compose([
-            transforms.RandomResizedCrop(
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.RandomResizedCrop(
                 target_resolution,
                 scale=(0.7, 1.0),
                 ratio=(0.75, 1.3333333333333333),
                 interpolation=2),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            torchvision.transforms.RandomHorizontalFlip(),
+            torchvision.transforms.ToTensor(),
             normalize
         ])
     return transform
@@ -232,8 +229,8 @@ def get_metashift_loaders(path, batch_size, num_workers = 2):
     subsets = full_dataset.get_splits(splits=splits, train_frac=1.0)
     train_data, val_data, test_data = [subsets[split] for split in splits]
 
-    train_loader = DataLoader(train_data, shuffle=True, **loader_kwargs)
-    test_loader = DataLoader(test_data, shuffle=False, **loader_kwargs)
-    val_loader = DataLoader(val_data, shuffle=False, **loader_kwargs)
+    train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, **loader_kwargs)
+    test_loader = torch.utils.data.DataLoader(test_data, shuffle=False, **loader_kwargs)
+    val_loader = torch.utils.data.DataLoader(val_data, shuffle=False, **loader_kwargs)
 
     return train_loader, val_loader, test_loader

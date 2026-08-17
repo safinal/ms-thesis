@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-from torch.nn import functional as F
 import gc
 
 def generate_waterbirds_dataset(X_train, g_train, spuriosity_percent):
@@ -25,6 +24,6 @@ def generate_waterbirds_dataset(X_train, g_train, spuriosity_percent):
     
     X_spurious = X_train[selected_indices]
     g_spurious = g_train[selected_indices]
-    y_spurious = F.one_hot(g_spurious.argmax(1)//2)
+    y_spurious = torch.nn.functional.one_hot(g_spurious.argmax(1)//2)
     
     return X_spurious, y_spurious, g_spurious

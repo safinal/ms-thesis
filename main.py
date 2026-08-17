@@ -1,37 +1,30 @@
 import argparse
 import numpy as np
-import torch
-import torch.optim as optim
-import torchvision
-import exps
-import data
-import utils
-import _test as test
-import run
 import os
 import random
-import numpy as np
 import json
-import copy
-from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
+import torch
+import torchvision
 
-
-from train import *
-from _test import *
+from exps import DFR, LossBasedExp, ClusterBasedExp, CVA, EntropyBasedExp
+from data import get_feature_loaders, get_urbancars_loaders, get_celeba_loaders, get_waterbirds_loaders, dataset_specs
+from train import train_cnn
+from _test import test_cnn
+from run import run_last_layer_experiment, multi_eval
+from utils import weight_init, get_fc, eval_model, get_pretrained_resnet50
 
 
 def generate_optimizer_and_scheduler(model, learning_rate, step_size, gamma, optimizer_type, l2=0):
     if optimizer_type == 'adam':
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=l2)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=l2)
     elif optimizer_type == 'adamW':
-        optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=l2)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=l2)
     elif optimizer_type == 'SGD':
-        optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=l2)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=l2)
     else:
         raise ValueError("Invalid optimizer type. Supported options are 'adam', 'adamW', and 'SGD'.")
 
-    scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)
-    # scheduler = CosineAnnealingLR(optimizer, 10, eta_min=1e-5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
     return optimizer, scheduler
 
 
@@ -42,16 +35,16 @@ def get_dataset_loaders(args):
     if args.feature_only:
         if args.validation_path:
             print ('Loading validation data from the provided path.')
-            return data.get_feature_loaders(args.dataset_path, args.batch_size, validation_path=args.validation_path)
+            return get_feature_loaders(args.dataset_path, args.batch_size, validation_path=args.validation_path)
         else:
-            return data.get_feature_loaders(args.dataset_path, args.batch_size)
+            return get_feature_loaders(args.dataset_path, args.batch_size)
 
     elif args.dataset == 'waterbirds':
-        return data.get_waterbirds_loaders(args.dataset_path, batch_size=args.batch_size)
+        return get_waterbirds_loaders(args.dataset_path, batch_size=args.batch_size)
     elif args.dataset == 'celeba':
-        return data.get_celeba_loaders(args.dataset_path, batch_size=args.batch_size, num_workers=1)
+        return get_celeba_loaders(args.dataset_path, batch_size=args.batch_size, num_workers=1)
     elif args.dataset == 'urbancars':
-        return data.get_urbancars_loaders(args.dataset_path, args.batch_size, "both")
+        return get_urbancars_loaders(args.dataset_path, args.batch_size, "both")
 
 
 
@@ -59,14 +52,14 @@ def freeze_model(model, reinit = True):
     # ret = copy.deepcopy(model)
     if hasattr(model, "model"):
         if reinit:
-            utils.weight_init(model.model.fc)
+            weight_init(model.model.fc)
         for param in model.model.parameters():
             param.requires_grad = False
         for param in model.model.fc.parameters():
             param.requires_grad = True
     else:
         if reinit:
-            utils.weight_init(model.fc)
+            weight_init(model.fc)
         for param in model.parameters():
             param.requires_grad = False
         for param in model.fc.parameters():
@@ -78,17 +71,17 @@ def freeze_model(model, reinit = True):
 
 def generate_experiment(args, model=None):
     if args.experiment == 'DFR':
-        return exps.DFR()
+        return DFR()
     elif args.experiment == 'loss':
-        return exps.LossBasedExp()
+        return LossBasedExp()
     elif args.experiment == 'cluster':
-        return exps.ClusterBasedExp()
+        return ClusterBasedExp()
     elif args.experiment == 'entropy':
-        return exps.EntropyBasedExp()
-    elif args.experiment == 'gradcam':
-        return exps.GradCAMExp(model)
+        return EntropyBasedExp()
+    # elif args.experiment == 'gradcam':
+    #     return GradCAMExp(model)
     elif args.experiment == 'CVA':
-        return exps.CVA()
+        return CVA()
 
 
 
@@ -113,7 +106,7 @@ def get_early_stop_valloaders(model, args, trainloader, valloader, path):
             train_early_stop(val_model, trainloader, valloader)
             torch.save (val_model.state_dict(), save_path)
 
-        _, _, miscls_envs, corrcls_envs = test.test_cnn(valloader, val_model, return_samples=True, args=args)
+        _, _, miscls_envs, corrcls_envs = test_cnn(valloader, val_model, return_samples=True, args=args)
         new_valloader = experiment.create_balanced_dataloader_val(
             miscls_envs, corrcls_envs,
             sample_size=99999999999,
@@ -144,7 +137,7 @@ def get_cls_valloaders (model, args, valloader):
         if args.error_splitting:
             reinit = False
         ret = freeze_model(model, reinit=reinit)
-        avg_acc, worst_acc, miscls_envs, corrcls_envs = test.test_cnn(valloader, ret, return_samples=True, args=args)
+        avg_acc, worst_acc, miscls_envs, corrcls_envs = test_cnn(valloader, ret, return_samples=True, args=args)
         for g in range(n_envs):
             print(f'for env{g}:\n\tmiscls:', end=' ')
             print(len(miscls_envs[g]))
@@ -190,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, default=0.1, help='Gamma for LR scheduler')
     parser.add_argument('--epochs', type=int, default=30, help='Number of epochs')
     parser.add_argument('--pretrained_path', type=str, default=None, help='Path of the pretrained model file')
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--ba'tch_size, type=int, default=128)
     parser.add_argument('--num_workers', type=int, default=4, help='Number of CPU cores to use')
     parser.add_argument('--test_only', type=bool, default=False, help='Just test the specified model on the dataset')
     parser.add_argument('--log', type=bool, default=True, help='Whether log the experiment on wandb or not')
@@ -212,7 +205,7 @@ if __name__ == '__main__':
     editing_model_name = args.balanced_dataset_path.split('/')[-2] if args.balanced_dataset_path is not None else None
     save_dir = os.path.join(
         args.output_path,
-        f"{args.experiment}_{args.comments}_{args.dataset}_opt-{args.optimizer}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}_feature-{args.feature_only}_editing-{editing_model_name}/"
+        f"{args.experiment}_{args.comments}_{args.dataset}_opt-{args.optimizer}_batchsize{args.batch_size}_LR{args.learning_rate}_step{args.step_size}_gamma{args.gamma}_seed{args.seed}_samples{args.sample_size}_l1{args.l1}_feature-{args.feature_only}_editing-{editing_model_name}/"
     )
 
     if not os.path.exists(save_dir):
@@ -237,29 +230,29 @@ if __name__ == '__main__':
     ###################################################
     trainloader, lastlayerloader, valloader, testloader = get_dataset_loaders(args)
 
-    n_envs = data.dataset_specs.datasets[args.dataset]['num_envs']
+    n_envs = dataset_specs.datasets[args.dataset]['num_envs']
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if args.feature_only:
-        n = data.dataset_specs.datasets[args.dataset]['num_classes']
-        d = data.dataset_specs.datasets[args.dataset]['hidden_layer_size']
-        model = utils.get_fc(device, args.pretrained_path, num_features=d, num_classes=n)
+        n = dataset_specs.datasets[args.dataset]['num_classes']
+        d = dataset_specs.datasets[args.dataset]['hidden_layer_size']
+        model = get_fc(device, args.pretrained_path, num_features=d, num_classes=n)
     else:
-        model = utils.get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
+        model = get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
 
     if args.test_only:
         model.zero_grad()
         with torch.no_grad():
-            utils.eval_model(trainloader, valloader, testloader, model, lastlayerloader=lastlayerloader, args=args)
+            eval_model(trainloader, valloader, testloader, model, lastlayerloader=lastlayerloader, args=args)
     else:
         if args.experiment != 'ERM':
-            print ('Accuracy of ERM on the test set')
-            _, _ = test.test_cnn(testloader, model, return_samples=False, args=args, inferred_groups=False)
-
+            print('Accuracy of ERM on the test set')
+            _, _ = test_cnn(testloader, model, return_samples=False, args=args, inferred_groups=False)
+            
             # model = freeze_model(model) # Uncomment if you want to infer lastlayer based on random classifier
             experiment = generate_experiment(args, model)
-            avg_acc, worst_acc, miscls_envs, corrcls_envs = test.test_cnn(lastlayerloader, model, return_samples=True, args=args)
+            avg_acc, worst_acc, miscls_envs, corrcls_envs = test_cnn(lastlayerloader, model, return_samples=True, args=args)
             for g in range(4):
                 print(f'for env{g}:\n\tmiscls:', end=' ')
                 print(len(miscls_envs[g]))
@@ -314,7 +307,7 @@ if __name__ == '__main__':
             else:
                 model = freeze_model(model, reinit=True)
 
-            result = run.run_last_layer_experiment(
+            result = run_last_layer_experiment(
                 model, 
                 device, 
                 balanced_loader, 
@@ -327,7 +320,7 @@ if __name__ == '__main__':
                 save_dir=save_dir
             )
         else:
-            result = run.run_last_layer_experiment(
+            result = run_last_layer_experiment(
                 model, 
                 device, 
                 trainloader, 
@@ -342,8 +335,8 @@ if __name__ == '__main__':
         print(f'Best model saved at {result}')
 
         if args.feature_only:
-            n = data.dataset_specs.datasets[args.dataset]['num_classes']
-            d = data.dataset_specs.datasets[args.dataset]['hidden_layer_size']
+            n = dataset_specs.datasets[args.dataset]['num_classes']
+            d = dataset_specs.datasets[args.dataset]['hidden_layer_size']
             model.fc = torch.nn.Linear(d, n)
             checkpoint = torch.load(result)
             model.load_state_dict(checkpoint)
@@ -351,7 +344,7 @@ if __name__ == '__main__':
             test_model.device = "cuda"
 
         else:
-            n_classes = data.dataset_specs.datasets[args.dataset]['num_classes']
+            n_classes = dataset_specs.datasets[args.dataset]['num_classes']
             model = torchvision.models.resnet50(weights=None)
             d = model.fc.in_features
             model.fc = torch.nn.Linear(d, n_classes)
@@ -361,11 +354,11 @@ if __name__ == '__main__':
             test_model.device = "cuda"
 
         if args.for_free:
-            val_avg, val_worst = run.multi_eval(test_model, valloaders, False, args)
+            val_avg, val_worst = multi_eval(test_model, valloaders, False, args)
         else:
-            val_avg, val_worst = test.test_cnn(valloader, test_model, return_samples=False, args=args, inferred_groups=True)
+            val_avg, val_worst = test_cnn(valloader, test_model, return_samples=False, args=args, inferred_groups=True)
 
-        test_avg, test_worst = test.test_cnn(testloader, test_model, return_samples=False, args=args, inferred_groups=False)
+        test_avg, test_worst = test_cnn(testloader, test_model, return_samples=False, args=args, inferred_groups=False)
 
         res_dict = {'val':{'avg': val_avg, 'worst':val_worst}, 'test': {'avg': test_avg , 'worst':test_worst}}
         print (res_dict)

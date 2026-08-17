@@ -1,9 +1,7 @@
 import torch
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-from torch.utils.data.sampler import WeightedRandomSampler
 
-class DRODataset(Dataset):
+
+class DRODataset(torch.utils.data.Dataset):
     def __init__(self, dataset, process_item_fn, n_groups, n_classes, group_str_fn):
         self.dataset = dataset
         self.process_item = process_item_fn
@@ -58,10 +56,10 @@ class DRODataset(Dataset):
             weights = group_weights[self._group_array]
 
             # Replacement needs to be set to True, otherwise we'll run out of minority samples
-            sampler = WeightedRandomSampler(weights, len(self), replacement=True)
+            sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(self), replacement=True)
             shuffle = False
 
-        loader = DataLoader(
+        loader = torch.utils.data.DataLoader(
             self,
             shuffle=shuffle,
             sampler=sampler,

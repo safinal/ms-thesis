@@ -1,10 +1,9 @@
-import torch
-from torch import nn
 import numpy as np
-from torch.utils.data import DataLoader, Dataset, random_split
+import torch
 import torchvision
 
-class DominoesMnistCifarDataset(Dataset):
+
+class DominoesMnistCifarDataset(torch.utils.data.Dataset):
     def __init__(self, data_type, spuriousity):
 
         assert data_type in ['train', 'last_layer', 'val', 'test'], print("Error! no data_type found")
@@ -16,8 +15,8 @@ class DominoesMnistCifarDataset(Dataset):
         mydir='path'
         mnist_train_raw = torchvision.datasets.MNIST(f'{mydir}/data/mnist/', train=True, download=True, transform=transform)
         cifar_train_raw = torchvision.datasets.CIFAR10(f'{mydir}/data/cifar10/', train=True, download=True, transform=transform)
-        mnist_train, mnist_last_layer, mnist_valid = random_split(mnist_train_raw, [0.64, 0.16, 0.20], generator=torch.Generator().manual_seed(42))
-        cifar_train, cifar_last_layer, cifar_valid = random_split(cifar_train_raw, [0.64, 0.16, 0.20], generator=torch.Generator().manual_seed(42))
+        mnist_train, mnist_last_layer, mnist_valid = torch.utils.data.random_split(mnist_train_raw, [0.64, 0.16, 0.20], generator=torch.Generator().manual_seed(42))
+        cifar_train, cifar_last_layer, cifar_valid = torch.utils.data.random_split(cifar_train_raw, [0.64, 0.16, 0.20], generator=torch.Generator().manual_seed(42))
 
         mnist_test = torchvision.datasets.MNIST(f'{mydir}/data/mnist/', train=False, download=True, transform=transform)
         cifar_test = torchvision.datasets.CIFAR10(f'{mydir}/data/FashionMNIST/', train=False, download=True, transform=transform)
@@ -41,7 +40,7 @@ class DominoesMnistCifarDataset(Dataset):
 
         x, y, g = make_spurious_dataset(mnist_dataset, cifar_dataset, spuriousity)
         self.x = x
-        self.y_onehot = nn.functional.one_hot(y.type(torch.LongTensor)).type(torch.FloatTensor)
+        self.y_onehot = torch.nn.functional.one_hot(y.type(torch.LongTensor)).type(torch.FloatTensor)
         self.y = y.tolist()
         self.g = g.tolist()
         self.env_dict = {
@@ -89,16 +88,16 @@ def make_spurious_dataset(mnist_dataset, cifar_dataset, spuriousity):
     X_c_9 = X_c_9[torch.randperm(len(X_c_9))]
 
     min_length = min(len(X_m_0), len(X_m_1), len(X_c_1), len(X_c_9))
-    X_m_0, _ = random_split(X_m_0, [min_length, len(X_m_0) - min_length], generator=torch.Generator().manual_seed(42))
-    X_m_1, _ = random_split(X_m_1, [min_length, len(X_m_1) - min_length], generator=torch.Generator().manual_seed(42))
-    X_c_1, _ = random_split(X_c_1, [min_length, len(X_c_1) - min_length], generator=torch.Generator().manual_seed(42))
-    X_c_9, _ = random_split(X_c_9, [min_length, len(X_c_9) - min_length], generator=torch.Generator().manual_seed(42))
+    X_m_0, _ = torch.utils.data.random_split(X_m_0, [min_length, len(X_m_0) - min_length], generator=torch.Generator().manual_seed(42))
+    X_m_1, _ = torch.utils.data.random_split(X_m_1, [min_length, len(X_m_1) - min_length], generator=torch.Generator().manual_seed(42))
+    X_c_1, _ = torch.utils.data.random_split(X_c_1, [min_length, len(X_c_1) - min_length], generator=torch.Generator().manual_seed(42))
+    X_c_9, _ = torch.utils.data.random_split(X_c_9, [min_length, len(X_c_9) - min_length], generator=torch.Generator().manual_seed(42))
 
-    X_m_0_maj, X_m_0_min = random_split(X_m_0, [spuriousity, 1 - spuriousity], generator=torch.Generator().manual_seed(42))
-    X_m_1_maj, X_m_1_min = random_split(X_m_1, [spuriousity, 1 - spuriousity], generator=torch.Generator().manual_seed(42))
+    X_m_0_maj, X_m_0_min = torch.utils.data.random_split(X_m_0, [spuriousity, 1 - spuriousity], generator=torch.Generator().manual_seed(42))
+    X_m_1_maj, X_m_1_min = torch.utils.data.random_split(X_m_1, [spuriousity, 1 - spuriousity], generator=torch.Generator().manual_seed(42))
 
-    X_c_1_maj, X_c_1_min = random_split(X_c_1, [spuriousity, 1 - spuriousity], generator=torch.Generator().manual_seed(42))
-    X_c_9_maj, X_c_9_min = random_split(X_c_9, [spuriousity, 1 - spuriousity], generator=torch.Generator().manual_seed(42))
+    X_c_1_maj, X_c_1_min = torch.utils.data.random_split(X_c_1, [spuriousity, 1 - spuriousity], generator=torch.Generator().manual_seed(42))
+    X_c_9_maj, X_c_9_min = torch.utils.data.random_split(X_c_9, [spuriousity, 1 - spuriousity], generator=torch.Generator().manual_seed(42))
 
     group_0_X = torch.cat((X_c_1_maj[:], X_m_0_maj[:]), dim=2)
     group_0_Y = torch.zeros(len(group_0_X))
@@ -132,7 +131,7 @@ def get_dataset(phase, spuriousity):
     
 def get_loader(phase, spuriousity=95, **kwargs):
     dataset = get_dataset(phase, spuriousity)
-    return DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True if phase == 'train' else False)
+    return torch.utils.data.DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True if phase == 'train' else False)
 
 def get_dominoes_loaders(spuriousity=95, **kwargs):
     trainloader = get_loader('train', spuriousity=spuriousity/100., batch_size=kwargs.get('batch_size', 128))

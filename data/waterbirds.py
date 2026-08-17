@@ -37,12 +37,12 @@ class WaterbirdDataset(torch.utils.data.Dataset):
         if 'split' in self.metadata_df.columns:
             self.metadata_df = self.metadata_df[self.metadata_df['split']==self.split_dict[self.split]]
         if sample_size is not None:
-            metadata_df = pd.DataFrame(columns=[self.metadata_df.columns])
+            metadata_df = pd.DataFrame(columns=self.metadata_df.columns)
             for label in range(2):
                 temp1 = self.metadata_df[self.metadata_df['y'] == label].sample(n=sample_size)
                 temp2 = temp1.copy()
                 temp2['img_filename'] = temp2['img_filename'].map(lambda x: x.replace('_aug', '') if '_aug' in x else x.split('.')[0] + '_aug' + x[-4:])
-                temp2['y'] = int(not label)
+                temp2['y'] = float(int(not label))
                 metadata_df = pd.concat((metadata_df, temp1, temp2))
             self.metadata_df = metadata_df
 

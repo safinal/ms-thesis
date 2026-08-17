@@ -1,15 +1,11 @@
-from spuco.group_inference import EIIL
 import torch
-import models
 import data
 import utils
 import argparse
-from tqdm import tqdm
 import os
-import random
-import numpy as np
-from torchvision.models import resnet18
-import torch.nn as nn
+from tqdm import tqdm
+from spuco.group_inference import EIIL
+
 
 def get_dataset_loaders(args):
     '''

@@ -1,4 +1,3 @@
-from torch import nn
 from models import ResNet50, StdResNet50, ResNet18, LeNet5, get_fc
 from _test import test_cnn 
 import torch 
@@ -8,16 +7,16 @@ def weight_init(m):
     """
     Initialize the weights of a given module.
     """
-    if isinstance(m, nn.Conv2d):
-        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+    if isinstance(m, torch.nn.Conv2d):
+        torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
         if m.bias is not None:
-            nn.init.constant_(m.bias, 0)
-    elif isinstance(m, nn.BatchNorm2d):
-        nn.init.constant_(m.weight, 1)
-        nn.init.constant_(m.bias, 0)
-    elif isinstance(m, nn.Linear):
-        nn.init.xavier_uniform_(m.weight.data)
-        nn.init.constant_(m.bias.data, 0.0)
+            torch.nn.init.constant_(m.bias, 0)
+    elif isinstance(m, torch.nn.BatchNorm2d):
+        torch.nn.init.constant_(m.weight, 1)
+        torch.nn.init.constant_(m.bias, 0)
+    elif isinstance(m, torch.nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight.data)
+        torch.nn.init.constant_(m.bias.data, 0.0)
 
 def get_lenet(device, pretrained_path=None):
     model = LeNet5()

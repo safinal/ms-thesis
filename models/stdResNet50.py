@@ -1,6 +1,7 @@
 import torch 
-from torch import nn
+
 from .resnet50 import ResNet50
+
 
 class StandardScaler:
     def __init__(self, mean=None, std=None, epsilon=1e-7):
@@ -20,14 +21,14 @@ class StandardScaler:
         self.fit(values)
         return self.transform(values)
     
-class StdResNet50(nn.Module):
+class StdResNet50(torch.nn.Module):
     def __init__(self, num_classes, pretrained_path=None):
         super(StdResNet50, self).__init__()
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         model = ResNet50().to(self.device)
         if pretrained_path:
             model.load_state_dict(torch.load(pretrained_path, map_location=self.device))
-        self.model = nn.Sequential(*list(model.model.children())[:-1])
+        self.model = torch.nn.Sequential(*list(model.model.children())[:-1])
         self.scaler = StandardScaler()
         self.fc = model.model.fc
 

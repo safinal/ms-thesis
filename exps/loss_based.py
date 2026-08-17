@@ -1,9 +1,8 @@
 import torch
 import numpy as np
-import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader
+
 from .experiment import Experiment
-import itertools
+
 
 class LossBasedExp(Experiment):
     def __init__(self):
@@ -11,7 +10,7 @@ class LossBasedExp(Experiment):
         self.env_dict = {}
 
     def calculate_cross_entropy(self, envs_samples_dict, model):
-        loss_fn = nn.CrossEntropyLoss()
+        loss_fn = torch.nn.CrossEntropyLoss()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         model.to(device)
@@ -101,8 +100,8 @@ class LossBasedExp(Experiment):
 
         X, y = self.merge_dicts(high_loss_selected_samples, low_loss_selected_samples)
         envs = torch.zeros((X.shape[0],4))
-        dataset = TensorDataset(X, y, envs)
-        balanced_loader = DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
+        dataset = torch.utils.data.TensorDataset(X, y, envs)
+        balanced_loader = torch.utils.data.DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
         return balanced_loader
 
     def create_balanced_dataloader_val(self, miscls_data_dict, corrcls_data_dict, sample_size, model, **kwargs):
@@ -138,8 +137,8 @@ class LossBasedExp(Experiment):
 
             all_envs = torch.cat(all_envs, 0)
 
-        dataset = TensorDataset(X, y, all_envs)
-        balanced_loader = DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
+        dataset = torch.utils.data.TensorDataset(X, y, all_envs)
+        balanced_loader = torch.utils.data.DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
         return balanced_loader
 
     def create_balanced_random_dataloader(self, samples: dict, **kwargs):
@@ -157,8 +156,8 @@ class LossBasedExp(Experiment):
         envs = torch.cat(all_envs)
 
         X, y = self.merge_dicts(samples, {})
-        dataset = TensorDataset(X, y, envs)
-        balanced_loader = DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
+        dataset = torch.utils.data.TensorDataset(X, y, envs)
+        balanced_loader = torch.utils.data.DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
         return balanced_loader
 
 
@@ -173,8 +172,8 @@ class LossBasedExp(Experiment):
         corrcls_selected_samples = self.select_samples(corrcls_data_dict, corrcls_label_loss_dict, sample_size, top=False)
         X, y = self.merge_dicts({}, corrcls_selected_samples)
         dummy_envs = torch.zeros((X.shape[0],4))
-        dataset = TensorDataset(X, y, dummy_envs)
-        biased_loader = DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
+        dataset = torch.utils.data.TensorDataset(X, y, dummy_envs)
+        biased_loader = torch.utils.data.DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
         return biased_loader
 
     def set_env_dict(self, num_classes):

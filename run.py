@@ -1,6 +1,6 @@
 from utils import *
-from train import *
-from _test import *
+from train import train_cnn
+from _test import test_cnn
 import torch
 import torch.nn as nn
 import os
@@ -92,9 +92,21 @@ def run_last_layer_experiment(
     torch.save(model.state_dict(), last_model)
     return best_worst_acc_model
 
-def run_loss_inspect_experiment(model, device, spuriousity, balanced_dataloader, testloader, exp_name,
-                              optimizer, l1_lambda, scheduler, dataset='waterbirds',
-                              epochs=30, log=False, inspect_loader=None):
+def run_loss_inspect_experiment(
+        model, 
+        device, 
+        spuriousity, 
+        balanced_dataloader, 
+        testloader, 
+        exp_name,
+        optimizer, 
+        l1_lambda, 
+        scheduler, 
+        dataset='waterbirds',
+        epochs=30, 
+        log=False, 
+        inspect_loader=None
+    ):
     losses = [[] for i in range(len(inspect_loader.dataset))]
     loss_fn = nn.CrossEntropyLoss()
     curr_worst = 0

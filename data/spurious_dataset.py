@@ -5,9 +5,9 @@ SpuriousCorrelation Dataset
 
 import os
 import torch
-from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
+
 
 def _get_split(split):
     try:
@@ -25,7 +25,7 @@ def _cast_int(arr):
         raise NotImplementedError
 
 
-class SpuriousCorrelationDataset(Dataset):
+class SpuriousCorrelationDataset(torch.utils.data.Dataset):
     def __init__(self, basedir, split="train", transform=None):
         self.basedir = basedir
         self.metadata_df = self._get_metadata(split)

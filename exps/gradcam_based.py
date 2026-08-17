@@ -1,17 +1,13 @@
-from pytorch_grad_cam import GradCAM, XGradCAM
+import torch
+import numpy as np
+from matplotlib import pyplot as plt
+from tqdm import tqdm 
+from pytorch_grad_cam import XGradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
-import torch
-import numpy as np
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader
 from .experiment import Experiment 
-import torchvision
 
-from matplotlib import pyplot as plt
-from tqdm import tqdm 
 
 class GradCAMExp(Experiment):
     def __init__(self, model):
@@ -23,7 +19,7 @@ class GradCAMExp(Experiment):
         )
         
     def calculate_cross_entropy(self, envs_samples_dict):
-        loss_fn = nn.CrossEntropyLoss()
+        loss_fn = torch.nn.CrossEntropyLoss()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.model.to(device)
@@ -120,7 +116,7 @@ class GradCAMExp(Experiment):
     
     
     def gradually_mask(self, image, label, range=[0.9, 0.8, 0.7, 0.6, 0.4, 0.2], mode='prediction'):
-        criterion = nn.CrossEntropyLoss()
+        criterion = torch.nn.CrossEntropyLoss()
         if mode == 'prediction':
             heat_map = self.heat_map_generator(image)
         if mode == 'correct_class':
@@ -157,7 +153,7 @@ class GradCAMExp(Experiment):
         plt.show()
 
     def check_incr_true_conf(self, x, y, masked_base_loss):
-        criterion = nn.CrossEntropyLoss(reduction='none')
+        criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
         # base_loss = 4
         low_threshold = 0.1
@@ -223,7 +219,7 @@ class GradCAMExp(Experiment):
         masked_base_loss = []
         labels = [torch.Tensor(np.array([[1, 0]])).to(device), torch.Tensor(
             np.array([[0, 1]])).to(device)]
-        criterion = nn.CrossEntropyLoss(reduction='none')
+        criterion = torch.nn.CrossEntropyLoss(reduction='none')
         null = torch.zeros((1, 3, 256, 256)).to(device)
 
         for label in labels:
@@ -242,6 +238,6 @@ class GradCAMExp(Experiment):
 
         X, y = self.merge_dicts(high_loss_selected_samples, corrcls_selected_samples)
         dummy_envs = torch.zeros((X.shape[0], 4))
-        dataset = TensorDataset(X, y, dummy_envs)
-        balanced_loader = DataLoader(dataset, batch_size, shuffle=True)
+        dataset = torch.utils.data.TensorDataset(X, y, dummy_envs)
+        balanced_loader = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True)
         return balanced_loader

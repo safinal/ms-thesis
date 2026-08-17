@@ -1,13 +1,12 @@
 import os
 import torch
-import pandas as pd
 from PIL import Image
 import numpy as np
-import torchvision.transforms as transforms
-from .models import model_attributes
-from torch.utils.data import Dataset, Subset
 
-class ConfounderDataset(Dataset):
+from .models import model_attributes
+
+
+class ConfounderDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir,
                  target_name, confounder_names,
                  model_type=None, augment_data=None):
@@ -52,7 +51,7 @@ class ConfounderDataset(Dataset):
             if train_frac<1 and split == 'train':
                 num_to_retain = int(np.round(float(len(indices)) * train_frac))
                 indices = np.sort(np.random.permutation(indices)[:num_to_retain])
-            subsets[split] = Subset(self, indices)
+            subsets[split] = torch.utils.data.Subset(self, indices)
         return subsets
 
     def group_str(self, group_idx):

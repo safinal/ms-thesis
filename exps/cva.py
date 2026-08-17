@@ -1,8 +1,7 @@
 import torch
 import os
 
-from data.celeba import CelebADataset
-from data.waterbirds import WaterbirdDataset
+from data import CelebADataset, WaterbirdDataset, SimpleUrbanCarsDataset
 from .experiment import Experiment
 
 
@@ -21,5 +20,5 @@ class CVA(Experiment):
         elif dataset == 'waterbirds':
             dataset = WaterbirdDataset(split='last_layer', transform='test', dataset_dir=balanced_dataset_path, num_classes=2, spuriousity=95, sample_size=sample_size)
         elif dataset == 'urbancars':
-            pass
+            dataset = SimpleUrbanCarsDataset(root_dir_path=balanced_dataset_path, sample_size=sample_size)
         return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)

@@ -1,8 +1,7 @@
 import torch
-import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader
+
 from .experiment import Experiment 
-import torch.nn.functional as F
+
 
 class EntropyBasedExp(Experiment):
     def __init__(self):
@@ -23,7 +22,7 @@ class EntropyBasedExp(Experiment):
                     input_tensor = torch.Tensor(sample[0]).to(device)
 
                     output = model(input_tensor.unsqueeze(0))
-                    probs = F.softmax(output, dim=1)
+                    probs = torch.nn.functional.softmax(output, dim=1)
                     entropy = -(probs*torch.log(probs)).sum(dim=1)
                     env_entropy.append(entropy.item())
 
@@ -77,6 +76,6 @@ class EntropyBasedExp(Experiment):
         X, y = self.merge_dicts(miscls_selected_samples, corrcls_selected_samples)
         labels_tensor = torch.argmax(y, 1)
         dummy_envs = torch.zeros((X.shape[0], 4))
-        dataset = TensorDataset(X, y, dummy_envs)
-        balanced_loader = DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
+        dataset = torch.utils.data.TensorDataset(X, y, dummy_envs)
+        balanced_loader = torch.utils.data.DataLoader(dataset, batch_size=kwargs['batch_size'], shuffle=True)
         return balanced_loader
