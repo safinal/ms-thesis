@@ -180,7 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay coefficient for L2 regularization')
     parser.add_argument('--l1', type=float, default=0, help='Weight decay coefficient for L1 regularization')
     parser.add_argument('--step_size', type=int, default=10, help='Step size for LR scheduler')
-    parser.add_argument('--gamma', type=float, default=0.1, help='Gamma for LR scheduler')
+    parser.add_argument('--gamma', type=float, default=1.0, help='Gamma for LR scheduler')
     parser.add_argument('--epochs', type=int, default=30, help='Number of epochs')
     parser.add_argument('--pretrained_path', type=str, default=None, help='Path of the pretrained model file')
     parser.add_argument('--ba'tch_size, type=int, default=128)
