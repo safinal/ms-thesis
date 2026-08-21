@@ -183,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, default=1.0, help='Gamma for LR scheduler')
     parser.add_argument('--epochs', type=int, default=30, help='Number of epochs')
     parser.add_argument('--pretrained_path', type=str, default=None, help='Path of the pretrained model file')
-    parser.add_argument('--ba'tch_size, type=int, default=128)
+    parser.add_argument('--batch_size, type=int, default=128)
     parser.add_argument('--num_workers', type=int, default=4, help='Number of CPU cores to use')
     parser.add_argument('--test_only', type=bool, default=False, help='Just test the specified model on the dataset')
     parser.add_argument('--log', type=bool, default=True, help='Whether log the experiment on wandb or not')
