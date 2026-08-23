@@ -12,6 +12,7 @@ import torch
 import torchvision
 import random
 import pandas as pd
+import numpy as np
 from PIL import Image
 
 class UrbanCarsDataset(torch.utils.data.Dataset):
@@ -221,7 +222,6 @@ class SimpleUrbanCarsDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir_path, sample_size=None):
         self.root_dir_path = root_dir_path
         self.metadata_df = pd.read_csv(os.path.join(root_dir_path, 'metadata.csv'))
-        self.y = torch.nn.functional.one_hot(torch.tensor(self.metadata_df["y"].to_numpy()), num_classes=2).type(torch.FloatTensor)
         self.transform = get_transforms("resnet50", is_training=False)
 
         if sample_size is not None:
@@ -230,9 +230,12 @@ class SimpleUrbanCarsDataset(torch.utils.data.Dataset):
                 temp1 = self.metadata_df[self.metadata_df['y'] == label].sample(n=sample_size)
                 temp2 = temp1.copy()
                 temp2['img_filename'] = temp2['img_filename'].map(lambda x: x.replace('_aug', '') if '_aug' in x else x.split('.')[0] + '_aug' + x[-4:])
-                temp2['y'] = int(not label)
+                temp2['y'] = float(int(not label))
                 metadata_df = pd.concat((metadata_df, temp1, temp2))
             self.metadata_df = metadata_df
+        
+        self.y = torch.nn.functional.one_hot(torch.from_numpy(self.metadata_df["y"].to_numpy()).long(), num_classes=2).type(torch.FloatTensor)
+    
 
     def __len__(self):
         return len(self.metadata_df)
