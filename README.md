@@ -1,4 +1,4 @@
-# Master's Thesis
+# Master's Thesis: Mitigating Spurious Correlations in Image Datasets via Counterfactual Data Augmentation
 
 ## Training
 
@@ -59,7 +59,7 @@ uv run main.py \
 ```
 
 
-Note: If the `--feature_only` flag is used, you should provide the pre-computed features of the specified dataset, which can be saved using the `save_features.py` file in the repository. If the flag is not specified, the raw image of the dataset should be provided. Here is an example script:
+**Note:** If the `--feature_only` flag is used, you should provide the pre-computed features of the specified dataset, which can be saved using the `save_features.py` file in the repository. If the flag is not specified, the raw image of the dataset should be provided. Here is an example script:
 
 - For main datasets:
 ```bash
@@ -116,10 +116,24 @@ uv run main.py \
 ```
 
 ## Datasets
+- [CelebA](https://drive.google.com/file/d/1kMs0KmmdqxXvEXHRA6YFTlHrKGTVZdV9/view?usp=drive_link)
+- [Waterbirds](https://drive.google.com/file/d/1UxSEZ1W0A4530ekGT8SsUCveqn2AMlL3/view?usp=sharing)
+- [UrbanCars](https://drive.google.com/file/d/19QYUPRetPrgGzdrIoUKK6cd2zrvSyx6t/view?usp=drive_link)
 
 ## ERM Checkpoints
 
 The ERM checkpoints for CelebA, Waterbirds, and UrbanCars are available [here](https://drive.google.com/file/d/1jGc9J4C_Ccy4P1WFfBG1-f4uuOfLzzk7/view?usp=drive_link).
+
+## Counterfactual Data Augmented Datasets
+- CelebA
+  - [FLUX.2 klein 4B](https://drive.google.com/file/d/1jufYL1D5IQMATLN8uDb47bMZt6U8SauH/view?usp=drive_link)
+  - [FLUX.2 klein 9B](https://drive.google.com/file/d/1rIto-SDMzIuDLTJHjLOPNumXue2_Nbz_/view?usp=drive_link)
+- Waterbirds
+  - [FLUX.2 klein 4B](https://drive.google.com/file/d/1BRV9gOMTdbSFS1KkCa-5NyyErUOCK0pq/view?usp=drive_link)
+  - [FLUX.2 klein 9B](https://drive.google.com/file/d/1DEL477vcfJaiW9nc6QRiAbQ80i4SCweA/view?usp=drive_link)
+- UrbanCars
+  - [FLUX.2 klein 4B](https://drive.google.com/file/d/1KZy0s9v1fXSWXPsqH9SvAUC3h1rUbnrE/view?usp=drive_link)
+  - [FLUX.2 klein 9B](https://drive.google.com/file/d/1nMIqXsl8CX0Y4BYmpJGDJM814qe2AARE/view?usp=drive_link)
 
 
 ## Acknowledgments
