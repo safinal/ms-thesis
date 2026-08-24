@@ -1,5 +1,8 @@
 # Master's Thesis: Mitigating Spurious Correlations in Image Datasets via Counterfactual Image Augmentation
 
+<img width="1804" height="872" alt="ChatGPT Image Aug 24, 2026, 05_24_35 PM" src="https://github.com/user-attachments/assets/82cff478-cffa-4b74-84d9-37def211c5b8" />
+
+
 ## Training
 
 1. **ERM Training**:
