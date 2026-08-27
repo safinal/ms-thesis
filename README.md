@@ -49,7 +49,7 @@ uv run main.py \
     --output_path logs \
     --dataset "$DATASET" \
     --dataset_path "datasets/${DATASET}" \
-    --experiment CVA \
+    --experiment CIA \
     --sample_size "$SAMPLE_SIZE" \
     --batch_size "$BATCH_SIZE" \
     --learning_rate "$LR" \
@@ -87,7 +87,7 @@ uv run save_features.py \
     --save_path "datasets_features/${dataset}_edited_${editing_model}_samples${sample_size}/noaug_features_seed${seed}" \
     --pretrained_path "checkpoints/${dataset}/erm_seed${seed}/final_checkpoint.pt" \
     --batch_size 512 \
-    --cva True \
+    --cia True \
     --sample_size "$sample_size"
 ```
 
@@ -105,7 +105,7 @@ uv run main.py \
     --output_path logs \
     --dataset "$DATASET" \
     --dataset_path "datasets_features/${DATASET}/noaug_features_seed${SEED}" \
-    --experiment CVA \
+    --experiment CIA \
     --sample_size "$SAMPLE_SIZE" \
     --batch_size "$BATCH_SIZE" \
     --learning_rate "$LR" \

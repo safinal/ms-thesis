@@ -52,7 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_path', type=str, required=True)
     parser.add_argument('--pretrained_path', type=str, required=True, help='Path to the trained model')
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--cva', type=bool, default=False)
+    parser.add_argument('--cia', type=bool, default=False)
     parser.add_argument('--sample_size', type=int, default=64)
 
     args = parser.parse_args()
@@ -62,8 +62,8 @@ if __name__ == '__main__':
 
     model = get_pretrained_resnet50(device, args.pretrained_path, mode='dfr')
 
-    if args.cva:
-        sets = {'cva': get_dataset_loader(args)}
+    if args.cia:
+        sets = {'cia': get_dataset_loader(args)}
     else:
         trainloader, lastlayerloader, valloader, testloader = get_dataset_loaders(args)
         sets = {

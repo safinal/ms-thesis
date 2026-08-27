@@ -6,7 +6,7 @@ import json
 import torch
 import torchvision
 
-from exps import DFR, LossBasedExp, ClusterBasedExp, CVA, EntropyBasedExp
+from exps import DFR, LossBasedExp, ClusterBasedExp, CIA, EntropyBasedExp
 from data import get_feature_loaders, get_urbancars_loaders, get_celeba_loaders, get_waterbirds_loaders, dataset_specs
 from train import train_cnn
 from _test import test_cnn
@@ -80,8 +80,8 @@ def generate_experiment(args, model=None):
         return EntropyBasedExp()
     # elif args.experiment == 'gradcam':
     #     return GradCAMExp(model)
-    elif args.experiment == 'CVA':
-        return CVA()
+    elif args.experiment == 'CIA':
+        return CIA()
 
 
 
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Spurious Correlation Experiment')
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'adamW', 'SGD'])
-    parser.add_argument('--experiment', type=str, required=True, choices=['ERM', 'DFR', 'loss', 'cluster', 'entropy', 'gradcam', 'CVA'])
+    parser.add_argument('--experiment', type=str, required=True, choices=['ERM', 'DFR', 'loss', 'cluster', 'entropy', 'gradcam', 'CIA'])
     parser.add_argument('--dataset', type=str, required=True, choices=['waterbirds', 'celeba', 'urbancars'])
     parser.add_argument('--dataset_path', type=str, required=True)
     parser.add_argument('--comments', type=str, default='', help='comments to be included in the name of logs')
